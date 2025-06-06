@@ -1,0 +1,59 @@
+{# file: templates/edit.html #}
+{% extends "base.html" %}
+{% block title %}编辑记录{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; 返回首页</a>
+<div class="form-panel">
+    <header>
+        <h2>编辑学习记录</h2>
+    </header>
+    <div class="panel-body">
+        <form method="POST">
+            {# ... （原有的编辑表单内容不变） ... #}
+            <div class="grid">
+                <label for="log_date">学习日期
+                    <input type="date" id="log_date" name="log_date" value="{{ log.log_date.isoformat() }}" required>
+                </label>
+                <label for="time_slot">计划时间段
+                    <input type="text" id="time_slot" name="time_slot" value="{{ log.time_slot or '' }}">
+                </label>
+            </div>
+
+            <label for="task">任务内容
+                <input type="text" id="task" name="task" value="{{ log.task }}" required>
+            </label>
+
+            <div class="grid">
+                <label for="category">分类
+                    <input type="text" id="category" name="category" value="{{ log.category or '' }}">
+                </label>
+                <label for="actual_duration">实际时长 (分钟)
+                    <input type="number" id="actual_duration" name="actual_duration" value="{{ log.actual_duration }}" required>
+                </label>
+                <label for="mood">心情 (1-5)
+                    <input type="number" id="mood" name="mood" min="1" max="5" value="{{ log.mood }}" required>
+                </label>
+            </div>
+
+            <label for="notes">心得笔记
+                <textarea id="notes" name="notes" rows="4">{{ log.notes or '' }}</textarea>
+            </label>
+
+            <button type="submit">更新记录</button>
+        </form>
+
+        {# --- [核心修改] 新增危险操作区域，用于删除记录 --- #}
+        <hr>
+        <div style="margin-top: 1.5rem;">
+            <hgroup>
+                <h4>危险操作</h4>
+                <p><small>此操作将永久删除这条学习记录，无法撤销。</small></p>
+            </hgroup>
+            <form action="{{ url_for('delete', log_id=log.id) }}" method="POST" onsubmit="return confirm('警告：您确定要永久删除这条记录吗？');">
+                <button type="submit" class="secondary outline">删除此记录</button>
+            </form>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

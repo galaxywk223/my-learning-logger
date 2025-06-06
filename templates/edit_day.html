@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}编辑每日效率{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; 返回首页</a>
+<div class="form-panel">
+    <header>
+        <h2>编辑 {{ log_date.strftime('%Y年%m月%d日') }} 的效率</h2>
+    </header>
+    <div class="panel-body">
+        <form method="POST">
+            <label for="efficiency">今日效率
+                <input type="text" id="efficiency" name="efficiency" value="{{ daily_data.efficiency if daily_data else '' }}" placeholder="例如：高效, 良好, 3/5">
+                <small>输入任何您认为合适的描述性文字或评分。</small>
+            </label>
+            <button type="submit">更新效率</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{# file: templates/base.html #}
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css" />
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <title>{% block title %}{% endblock %} - 学习跟踪器</title>
+</head>
+<body>
+    <main class="container">
+        <nav>
+            <ul>
+                <li><a href="{{ url_for('index') }}">主页</a></li>
+                <li><a href="{{ url_for('settings') }}">设置</a></li>
+                {# --- [核心修改] 新增图表页面链接 --- #}
+                <li><a href="{{ url_for('chart_page') }}">效率图表</a></li>
+                {% block nav_actions %}
+                    <li><a href="{{ url_for('add') }}">添加记录</a></li>
+                {% endblock %}
+            </ul>
+        </nav>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message" role="alert">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='main.js') }}" defer></script>
+</body>
+</html>

@@ -1,0 +1,244 @@
+/* static/style.css (最终交互版) */
+
+/* 1. 基础和导航栏样式 */
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background-color: #f8f9fa;
+}
+
+main.container {
+    max-width: 100%;
+    padding: 1rem 2rem 4rem 2rem;
+}
+
+nav {
+    background-color: #343a40;
+    border-radius: var(--pico-border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    height: 60px;
+}
+
+nav ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    height: 100%;
+    align-items: stretch;
+}
+
+nav ul li {
+    display: flex;
+    align-items: center;
+    transition: background-color 0.2s;
+}
+
+nav ul li:hover {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+nav ul a {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 16px;
+    color: #e9ecef;
+    text-decoration: none;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+nav ul li:hover a {
+    color: #fff;
+}
+
+/* 2. Flash消息 */
+.flash-message {
+    max-width: 700px;
+    margin: 0 auto 1.5rem auto;
+    text-align: center;
+    border: none;
+}
+
+/* 3. 表单面板样式 */
+.form-panel {
+    max-width: 800px;
+    margin: 2rem auto;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: var(--pico-border-radius);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    overflow: hidden;
+}
+
+.form-panel header {
+    background-color: #343a40;
+    color: #fff;
+    padding: 1.25rem 2rem;
+    margin: 0;
+}
+
+.form-panel header h2, .form-panel header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.form-panel a {
+    text-decoration: none;
+}
+
+.form-panel .panel-body {
+    padding: 2rem;
+}
+
+.form-panel .grid {
+    gap: 1.5rem;
+}
+
+.form-panel button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    font-size: 1rem;
+    margin-top: 1rem;
+}
+
+.back-link {
+    display: block;
+    max-width: 800px;
+    margin: 2rem auto -1.5rem auto;
+    font-weight: 500;
+}
+
+/* 4. 表格样式 */
+figure {
+    margin: 0;
+    padding: 0;
+}
+
+table {
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 0.95rem;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+    border-radius: var(--pico-border-radius);
+    overflow: hidden;
+}
+
+th {
+    background-color: #343a40;
+    color: #fff;
+    font-weight: 600;
+    padding: 14px 16px !important;
+}
+
+td, th {
+    vertical-align: middle !important;
+    border: none;
+    border-bottom: 1px solid #dee2e6;
+    text-align: center;
+}
+
+td {
+    padding: 12px 16px !important;
+    transition: background-color 0.3s ease;
+}
+
+/* 周次列和每日行的循环背景色 */
+.week-color-0 {
+    background-color: #e6f2f2 !important;
+}
+
+.week-color-1 {
+    background-color: #d9f2e6 !important;
+}
+
+.week-color-2 {
+    background-color: #d9e6f2 !important;
+}
+
+.week-color-3 {
+    background-color: #e6d9f2 !important;
+}
+
+.week-color-4 {
+    background-color: #f2d9e6 !important;
+}
+
+.week-color-5 {
+    background-color: #f2e6d9 !important;
+}
+
+.week-color-6 {
+    background-color: #f2f2d9 !important;
+}
+
+.day-color-0 td {
+    background-color: #ffffff;
+}
+
+.day-color-1 td {
+    background-color: #fafafa;
+}
+
+.day-color-2 td {
+    background-color: #f5f5f5;
+}
+
+.day-color-3 td {
+    background-color: #fafafa;
+}
+
+.day-color-4 td {
+    background-color: #ffffff;
+}
+
+.day-color-5 td {
+    background-color: #f5f5f5;
+}
+
+.day-color-6 td {
+    background-color: #fafafa;
+}
+
+/* 特殊列的颜色 */
+td.col-time-slot {
+    background-color: #fff3e0 !important;
+}
+
+td.col-duration {
+    background-color: #e3f2fd !important;
+}
+
+td small {
+    color: var(--pico-secondary);
+    display: block;
+    margin-top: 4px;
+    font-size: 0.85rem;
+}
+
+/* --- [核心修改] 移除旧的 .actions 样式 --- */
+
+/* 效率链接的最终样式 */
+a.efficiency-link {
+    display: block;
+    min-height: 24px;
+    text-decoration: none;
+    color: inherit;
+    font-weight: bold;
+    border-radius: var(--pico-border-radius);
+}
+
+a.efficiency-link:hover {
+    background-color: rgba(0, 0, 0, 0.05);
+}
+
+/* --- [新] 为每日记录添加更清晰的分割线 --- */
+tr.day-separator td {
+    border-top: 2px solid #e5e7eb; /* 一条2像素粗的浅灰色上边框 */
+}
+
+/* 修正表格第一行的顶部边框，避免双重边框 */
+thead + tbody tr.day-separator td {
+    border-top: none;
+}

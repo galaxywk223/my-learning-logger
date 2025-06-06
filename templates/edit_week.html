@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}编辑周效率{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; 返回首页</a>
+<div class="form-panel">
+    <header>
+        <h2>编辑 第 {{ week_num }} 周 ({{ year }}) 的效率</h2>
+    </header>
+    <div class="panel-body">
+        <form method="POST">
+            <label for="efficiency">本周效率
+                <input type="text" id="efficiency" name="efficiency" value="{{ weekly_data.efficiency if weekly_data else '' }}" placeholder="例如：良好, 4/5, 85%">
+                <small>输入任何您认为合适的描述性文字或评分。</small>
+            </label>
+            <button type="submit">更新效率</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

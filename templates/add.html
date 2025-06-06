@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}添加记录{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; 返回首页</a>
+<div class="form-panel">
+    <header>
+        <h2>添加新的学习记录</h2>
+    </header>
+    <div class="panel-body">
+        <form method="POST">
+            <div class="grid">
+                <label for="log_date">学习日期
+                    <input type="date" id="log_date" name="log_date" value="{{ default_date.isoformat() }}" required>
+                </label>
+                <label for="time_slot">计划时间段
+                    <input type="text" id="time_slot" name="time_slot" placeholder="例如: 1.5h 或 上课">
+                </label>
+            </div>
+
+            <label for="task">任务内容
+                <input type="text" id="task" name="task" placeholder="例如：学习Flask路由" required>
+            </label>
+
+            <div class="grid">
+                <label for="category">分类
+                    <input type="text" id="category" name="category" placeholder="例如：Python">
+                </label>
+                <label for="actual_duration">实际时长 (分钟)
+                    <input type="number" id="actual_duration" name="actual_duration" placeholder="例如: 90" required>
+                </label>
+                <label for="mood">心情 (1-5)
+                    <input type="number" id="mood" name="mood" min="1" max="5" value="3" required>
+                </label>
+            </div>
+
+            <label for="notes">心得笔记
+                <textarea id="notes" name="notes" rows="4" placeholder="可选"></textarea>
+            </label>
+
+            <button type="submit">提交记录</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,21 @@
+{# file: templates/import.html #}
+{% extends "base.html" %}
+{% block title %}批量导入{% endblock %}
+{% block content %}
+<a href="{{ url_for('index') }}" class="back-link">&larr; 返回首页</a>
+<div class="form-panel">
+    <header>
+        <h2>从 CSV 文件批量导入</h2>
+    </header>
+    <div class="panel-body">
+        <form method="POST" enctype="multipart/form-data">
+            <label for="file">
+                选择CSV文件
+                <small>文件需要包含 '日期', '任务', '总时长' 等列。效率数据也会被一并导入。</small>
+            </label>
+            <input type="file" id="file" name="file" accept=".csv" required>
+            <button type="submit">上传并导入</button>
+        </form>
+    </div>
+</div>
+{% endblock %}

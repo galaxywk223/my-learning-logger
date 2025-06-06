@@ -1,0 +1,96 @@
+{# file: templates/index.html #}
+{% extends "base.html" %}
+
+{% block title %}首页{% endblock %}
+
+{% block nav_actions %}
+<li><a href="{{ url_for('import_page') }}">批量导入</a></li>
+<li><a href="{{ url_for('add') }}">添加记录</a></li>
+{% endblock %}
+
+
+{% block content %}
+<hr style="margin-top: 0;">
+
+{% if setup_needed %}
+<article>
+    请先前往 <a href="{{ url_for('settings') }}">设置</a> 页面，设定周的起始日期。
+</article>
+{% elif structured_logs %}
+<figure>
+    <table role="grid">
+        <thead>
+        <tr>
+            <th>周次</th>
+            <th>本周效率</th>
+            <th>
+                <a href="{{ url_for('index', sort='asc' if current_sort == 'desc' else 'desc') }}"
+                   style="text-decoration: none; color: inherit;">
+                    日期 {% if current_sort == 'desc' %}▼{% else %}▲{% endif %}
+                </a>
+            </th>
+            <th>今日效率</th>
+            <th>时间段</th>
+            <th>任务 (分类)</th>
+            <th>总时长</th>
+            <th>心情</th>
+            {# --- [核心修改] 移除“操作”表头 --- #}
+            {#
+            <th>操作</th>
+            #}
+        </tr>
+        </thead>
+        <tbody>
+        {% for week in structured_logs %}
+        {% set total_logs_in_week = week.days | map(attribute='logs') | map('length') | sum %}
+        {% for day in week.days %}
+        {% for log in day.logs %}
+        {# --- [核心修改] 为tr添加data-log-id属性，用于JS识别 --- #}
+        <tr data-log-id="{{ log.id }}" class="day-color-{{ day.day_index % 7 }} {% if loop.first %}day-separator{% endif %}">
+            {% if week.days[0] == day and loop.first %}
+            {# --- [核心修改] 为周次列添加'week-column'类，用于JS识别并保护 #}
+            <td rowspan="{{ total_logs_in_week }}" class="week-column week-color-{{ week.week_index % 7 }}"><strong>第
+                {{ week.week_num }} 周</strong></td>
+            <td rowspan="{{ total_logs_in_week }}" class="week-column week-color-{{ week.week_index % 7 }}">
+                <a href="{{ url_for('edit_week', year=week.year, week_num=week.week_num) }}" class="efficiency-link">
+                    {{ week.efficiency or '&nbsp;' | safe }}
+                </a>
+            </td>
+            {% endif %}
+
+            {% if loop.first %}
+            <td rowspan="{{ day.logs | length }}" class="day-info-column">{{ day.date.month }}月{{ day.date.day }}日
+            </td>
+            <td rowspan="{{ day.logs | length }}" class="day-info-column">
+                <a href="{{ url_for('edit_day', iso_date=day.date.isoformat()) }}" class="efficiency-link">
+                    {{ day.efficiency or '&nbsp;' | safe }}
+                </a>
+            </td>
+            {% endif %}
+
+            <td class="col-time-slot">{{ log.time_slot }}</td>
+            <td>
+                {{ log.task }}
+                {% if log.category %}<small>分类: {{ log.category }}</small>{% endif %}
+                {% if log.notes %}<small>笔记: {{ log.notes }}</small>{% endif %}
+            </td>
+            <td class="col-duration">{{ log.duration_formatted }}</td>
+            <td>{{ log.mood }}</td>
+
+            {# --- [核心修改] 移除包含“编辑”和“删除”按钮的整个td单元格 --- #}
+            {#
+            <td> ...</td>
+            #}
+        </tr>
+        {% endfor %}
+        {% endfor %}
+        {% endfor %}
+        </tbody>
+    </table>
+</figure>
+{% else %}
+<article>
+    <p>还没有任何学习记录。现在就<a href="{{ url_for('add') }}">添加一条</a>吧！</p>
+</article>
+{% endif %}
+{% endblock %}

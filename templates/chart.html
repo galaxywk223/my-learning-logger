@@ -1,0 +1,23 @@
+{# file: templates/chart.html #}
+{% extends "base.html" %}
+
+{% block title %}效率趋势图{% endblock %}
+
+{% block content %}
+<div class="form-panel">
+    <header>
+        <h2>每日效率趋势分析</h2>
+    </header>
+    <div class="panel-body">
+        <p style="margin-bottom: 2rem;">
+            下图展示了从您设定的起始日期到今天为止的每日效率变化情况。<br>
+            <small>
+                灰色柱体代表每日的效率评分，蓝色曲线则代表了更能反映近期整体趋势的 **7日移动平均线**。
+            </small>
+        </p>
+        <div style="text-align: center; background-color: #FFFFFF; padding: 1rem 0;">
+            <img src="{{ url_for('generate_chart') }}" alt="每日效率趋势图" style="max-width: 100%; height: auto; border-radius: 4px;">
+        </div>
+    </div>
+</div>
+{% endblock %}
