@@ -17,7 +17,7 @@
     请先前往 <a href="{{ url_for('settings') }}">设置</a> 页面，设定周的起始日期。
 </article>
 {% elif structured_logs %}
-<figure>
+<div class="table-responsive-container">
     <table role="grid">
         <thead>
         <tr>
@@ -87,7 +87,7 @@
         {% endfor %}
         </tbody>
     </table>
-</figure>
+</div>
 {% else %}
 <article>
     <p>还没有任何学习记录。现在就<a href="{{ url_for('add') }}">添加一条</a>吧！</p>

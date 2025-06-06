@@ -242,3 +242,13 @@ tr.day-separator td {
 thead + tbody tr.day-separator td {
     border-top: none;
 }
+
+/* --- [新] 响应式表格容器 --- */
+.table-responsive-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch; /* 优化在iOS上的滑动体验 */
+    border: 1px solid #dee2e6;
+    border-radius: var(--pico-border-radius);
+    margin-bottom: 2rem;
+}
