@@ -61,17 +61,24 @@ class LogEntry(db.Model):
     log_date = db.Column(db.Date, nullable=False)
     time_slot = db.Column(db.String(50), nullable=True)
     task = db.Column(db.String(200), nullable=False)
-    actual_duration = db.Column(db.Integer, nullable=False)
+    actual_duration = db.Column(db.Integer, nullable=True)
     category = db.Column(db.String(100), nullable=True)
     mood = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
+    # app.py, inside the LogEntry class
     @property
     def duration_formatted(self):
+        # 在计算前先检查值是否存在
+        if self.actual_duration is None:
+            return "N/A"  # 或者返回空字符串 '' 或 '0h 0m'，根据你的需要
+
+        # 只有在值存在时才进行计算
         h, m = divmod(self.actual_duration, 60)
-        if h > 0 and m > 0: return f"{h}h {m}min"
-        if h > 0: return f"{h}h"
-        return f"{m}min"
+        if h > 0:
+            return f'{h}h {m}m'
+        else:
+            return f'{m}m'
 
 
 # --- 辅助函数 (无变化) ---
@@ -287,6 +294,16 @@ def edit_day(iso_date):
     daily_data = DailyData.query.filter_by(log_date=log_date).first()
     if request.method == 'POST':
         efficiency = request.form['efficiency']
+        if efficiency and efficiency.strip():  # 只有在用户输入了效率时才检查
+            logs_for_day = LogEntry.query.filter_by(log_date=log_date).all()
+            for log in logs_for_day:
+                if log.actual_duration is None or log.mood is None:
+                    flash(f"无法保存效率：记录 “{log.task}” 缺少时长或心情评分。", 'error')
+                    # 将已有数据传回模板，避免用户重新输入
+                    if not daily_data:
+                        daily_data = DailyData(log_date=log_date)
+                    daily_data.efficiency = efficiency  # 把用户刚输入的值传回去
+                    return render_template('edit_day.html', log_date=log_date, daily_data=daily_data)
         if daily_data:
             daily_data.efficiency = efficiency
         else:
@@ -300,11 +317,19 @@ def edit_day(iso_date):
 @app.route('/add', methods=['GET', 'POST'])
 def add():
     if request.method == 'POST':
-        db.session.add(LogEntry(
-            log_date=date.fromisoformat(request.form['log_date']), time_slot=request.form['time_slot'],
-            task=request.form['task'], actual_duration=int(request.form['actual_duration']),
-            category=request.form['category'], mood=int(request.form.get('mood', 0)), notes=request.form['notes']
-        ))
+        duration_str = request.form.get('actual_duration')
+        mood_str = request.form.get('mood')
+
+        new_log = LogEntry(
+            log_date=date.fromisoformat(request.form['log_date']),
+            time_slot=request.form['time_slot'],
+            task=request.form['task'],
+            actual_duration=int(duration_str) if duration_str else None,
+            category=request.form['category'],
+            mood=int(mood_str) if mood_str else None,
+            notes=request.form['notes']
+        )
+        db.session.add(new_log)
         db.session.commit()
         flash('新纪录添加成功！', 'success')
         return redirect(url_for('index'))
@@ -315,12 +340,15 @@ def add():
 def edit(log_id):
     log = LogEntry.query.get_or_404(log_id)
     if request.method == 'POST':
-        log.log_date = date.fromisoformat(request.form['log_date']);
+        duration_str = request.form.get('actual_duration')
+        mood_str = request.form.get('mood')
+
+        log.log_date = date.fromisoformat(request.form['log_date'])
         log.time_slot = request.form['time_slot']
-        log.task = request.form['task'];
-        log.actual_duration = int(request.form['actual_duration'])
-        log.category = request.form['category'];
-        log.mood = int(request.form.get('mood', 0));
+        log.task = request.form['task']
+        log.actual_duration = int(duration_str) if duration_str else None
+        log.category = request.form['category']
+        log.mood = int(mood_str) if mood_str else None
         log.notes = request.form['notes']
         db.session.commit()
         flash('记录更新成功！', 'success')
