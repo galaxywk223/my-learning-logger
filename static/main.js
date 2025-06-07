@@ -27,4 +27,20 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     });
+
+    // --- [新增功能] 自动隐藏 Flash 消息 ---
+    const flashMessages = document.querySelectorAll('.flash-message');
+    if (flashMessages) {
+        flashMessages.forEach(flashMessage => {
+            setTimeout(() => {
+                // 平滑淡出效果
+                flashMessage.style.transition = 'opacity 0.5s ease';
+                flashMessage.style.opacity = '0';
+                // 淡出动画结束后，彻底移除元素
+                setTimeout(() => {
+                    flashMessage.remove();
+                }, 500); // 这里的延迟应与CSS中的transition时间匹配
+            }, 4000); // 消息显示 4 秒后开始消失
+        });
+    }
 });

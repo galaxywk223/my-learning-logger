@@ -17,6 +17,9 @@ nav {
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     margin-bottom: 2rem;
     height: 60px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
 nav ul {
@@ -235,12 +238,13 @@ a.efficiency-link:hover {
 
 /* --- [新] 为每日记录添加更清晰的分割线 --- */
 tr.day-separator td {
-    border-top: 2px solid #e5e7eb; /* 一条2像素粗的浅灰色上边框 */
+    /* --- [核心修改] 加粗加深边框，使每日界限更清晰 --- */
+    border-top: 2px solid #adb5bd;
 }
 
 /* 修正表格第一行的顶部边框，避免双重边框 */
 thead + tbody tr.day-separator td {
-    border-top: none;
+    border-top: 2px solid #adb5bd;
 }
 
 /* --- [新] 响应式表格容器 --- */

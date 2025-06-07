@@ -4,8 +4,9 @@
 {% block title %}首页{% endblock %}
 
 {% block nav_actions %}
+{# --- [核心修改] 添加“导出数据”按钮 --- #}
 <li><a href="{{ url_for('import_page') }}">批量导入</a></li>
-<li><a href="{{ url_for('add') }}">添加记录</a></li>
+<li><a href="{{ url_for('export_data') }}">导出数据</a></li>
 {% endblock %}
 
 
@@ -75,7 +76,8 @@
                 {% if log.notes %}<small>笔记: {{ log.notes }}</small>{% endif %}
             </td>
             <td class="col-duration">{{ log.duration_formatted }}</td>
-            <td>{{ log.mood }}</td>
+            {# --- [核心修改] 如果log.mood不存在，则显示空字符串 --- #}
+            <td>{{ log.mood if log.mood is not none else '' }}</td>
 
             {# --- [核心修改] 移除包含“编辑”和“删除”按钮的整个td单元格 --- #}
             {#

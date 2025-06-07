@@ -5,7 +5,7 @@ import re
 from datetime import date, datetime, timedelta
 from itertools import groupby
 
-from flask import Flask, render_template, request, redirect, url_for, flash, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, send_file, Response
 from flask_sqlalchemy import SQLAlchemy
 
 # --- Matplotlib 设置 ---
@@ -71,7 +71,7 @@ class LogEntry(db.Model):
     def duration_formatted(self):
         # 在计算前先检查值是否存在
         if self.actual_duration is None:
-            return "N/A"  # 或者返回空字符串 '' 或 '0h 0m'，根据你的需要
+            return ""  # [核心修改] 从 "N/A" 改为空字符串
 
         # 只有在值存在时才进行计算
         h, m = divmod(self.actual_duration, 60)
@@ -187,6 +187,83 @@ def index():
     return render_template('index.html',
                            structured_logs=sorted_weeks,
                            current_sort=sort_order)
+
+
+# --- [新增功能] 导出数据为 CSV ---
+@app.route('/export')
+def export_data():
+    start_date_str = get_setting('week_start_date')
+    if not start_date_str:
+        flash('请先设置周起始日期，才能导出数据。', 'error')
+        return redirect(url_for('index'))
+    start_date = date.fromisoformat(start_date_str)
+
+    # 1. 获取所有需要的数据
+    logs = LogEntry.query.order_by(LogEntry.log_date.asc(), LogEntry.id.asc()).all()
+    weekly_efficiencies = {(w.year, w.week_num): w.efficiency for w in WeeklyData.query.all()}
+    daily_efficiencies = {d.log_date: d.efficiency for d in DailyData.query.all()}
+
+    def group_key(log):
+        return get_custom_week_info(log.log_date, start_date)
+
+    logs_by_week = groupby(logs, key=group_key)
+
+    # 2. 使用 StringIO 在内存中构建 CSV
+    si = io.StringIO()
+    cw = csv.writer(si)
+
+    # 3. 写入 CSV 表头
+    header = ['周次', '本周效率', '日期', '今日效率', '时间段', '任务', '分类', '总时长(分钟)', '心情', '笔记']
+    cw.writerow(header)
+
+    # 4. 遍历数据并写入行
+    for (year, week_num), week_logs_iter in logs_by_week:
+        week_logs = list(week_logs_iter)
+        is_first_in_week = True
+        week_efficiency = weekly_efficiencies.get((year, week_num), '')
+
+        logs_by_day = groupby(week_logs, key=lambda log: log.log_date)
+        for day_date, day_logs_iter in logs_by_day:
+            day_logs = list(day_logs_iter)
+            is_first_in_day = True
+            day_efficiency = daily_efficiencies.get(day_date, '')
+
+            for log in day_logs:
+                row = []
+                # 周信息列 (仅在每周第一行写入)
+                if is_first_in_week:
+                    row.append(f'第 {week_num} 周')
+                    row.append(week_efficiency)
+                    is_first_in_week = False
+                else:
+                    row.extend(['', ''])
+
+                # 日信息列 (仅在每日第一行写入)
+                if is_first_in_day:
+                    row.append(day_date.strftime('%Y-%m-%d'))
+                    row.append(day_efficiency)
+                    is_first_in_day = False
+                else:
+                    row.extend(['', ''])
+
+                # 学习记录列
+                row.extend([
+                    log.time_slot or '',
+                    log.task or '',
+                    log.category or '',
+                    log.actual_duration if log.actual_duration is not None else '',
+                    log.mood if log.mood is not None else '',
+                    log.notes or ''
+                ])
+                cw.writerow(row)
+
+    # 5. 创建 Flask Response 对象并返回
+    output = si.getvalue()
+    return Response(
+        output,
+        mimetype="text/csv",
+        headers={"Content-Disposition": f"attachment;filename=learning_logs_{date.today().isoformat()}.csv"}
+    )
 
 
 @app.route('/settings', methods=['GET', 'POST'])

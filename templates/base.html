@@ -11,14 +11,17 @@
 <body>
     <main class="container">
         <nav>
+            {# --- [核心修改] 将导航栏分为左右两部分 --- #}
             <ul>
                 <li><a href="{{ url_for('index') }}">主页</a></li>
                 <li><a href="{{ url_for('settings') }}">设置</a></li>
-                {# --- [核心修改] 新增图表页面链接 --- #}
                 <li><a href="{{ url_for('chart_page') }}">效率图表</a></li>
+            </ul>
+            <ul>
                 {% block nav_actions %}
-                    <li><a href="{{ url_for('add') }}">添加记录</a></li>
+                    {# 首页会在这里插入“批量导入”按钮 #}
                 {% endblock %}
+                <li><a href="{{ url_for('add') }}">添加记录</a></li>
             </ul>
         </nav>
 
