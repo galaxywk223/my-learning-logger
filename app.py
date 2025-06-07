@@ -403,18 +403,25 @@ def delete(log_id):
     return redirect(url_for('index'))
 
 
+# 文件: app.py
+
 @app.route('/clear_all_data', methods=['POST'])
 def clear_all_data():
     try:
-        db.session.query(LogEntry).delete();
-        db.session.query(DailyData).delete();
-        db.session.query(WeeklyData).delete()
-        db.session.commit()
-        flash('所有学习记录和效率数据已被成功清空！', 'success')
+        # --- [核心修改] ---
+        # db.drop_all() 会删除数据库中所有的表
+        db.drop_all()
+        # db.create_all() 会根据你最新的模型代码，重新创建所有的表
+        db.create_all()
+        # --- [修改结束] ---
+
+        flash('数据库已成功重置！所有表结构已更新，数据已清空。请重新设置起始日期。', 'success')
     except Exception as e:
         db.session.rollback()
-        flash(f'清空数据时发生错误: {e}', 'error')
-    return redirect(url_for('index'))
+        flash(f'重置数据库时发生严重错误: {e}', 'error')
+
+    # 重定向到设置页面，因为起始日期也需要重新设定
+    return redirect(url_for('settings'))
 
 
 @app.route('/chart')
