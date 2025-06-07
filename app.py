@@ -320,13 +320,27 @@ def add():
         duration_str = request.form.get('actual_duration')
         mood_str = request.form.get('mood')
 
+        # 安全地处理可能为空或无效的数字输入
+        try:
+            # 如果 duration_str 是非空字符串，则尝试转换为整数，否则为 None
+            final_duration = int(duration_str) if duration_str else None
+        except ValueError:
+            # 如果用户输入了无效内容（比如文字），则安全地设置为 None
+            final_duration = None
+
+        try:
+            # 对 mood 执行相同的安全处理
+            final_mood = int(mood_str) if mood_str else None
+        except ValueError:
+            final_mood = None
+
         new_log = LogEntry(
             log_date=date.fromisoformat(request.form['log_date']),
             time_slot=request.form['time_slot'],
             task=request.form['task'],
-            actual_duration=int(duration_str) if duration_str else None,
+            actual_duration=final_duration,  # 使用安全处理后的值
             category=request.form['category'],
-            mood=int(mood_str) if mood_str else None,
+            mood=final_mood,  # 使用安全处理后的值
             notes=request.form['notes']
         )
         db.session.add(new_log)
@@ -343,36 +357,29 @@ def edit(log_id):
 
     # 如果是表单提交 (POST 请求)
     if request.method == 'POST':
-        # --- 开始修改区域 ---
-
-        # 更新可以直接赋值的文本字段
-        # 使用 .get() 比 request.form['...'] 更安全，以防万一字段丢失
         log.log_date = date.fromisoformat(request.form.get('log_date'))
         log.time_slot = request.form.get('time_slot')
         log.task = request.form.get('task')
         log.category = request.form.get('category')
         log.notes = request.form.get('notes')
 
-        # 安全地处理 actual_duration，防止其为 None
+        # 安全地处理 actual_duration，允许其为 None
         try:
             duration_str = request.form.get('actual_duration')
-            # 如果 duration_str 有内容，则转换为整数；否则，默认为 0
-            log.actual_duration = int(duration_str) if duration_str else 0
+            # 如果 duration_str 有内容，则转换为整数；否则，设置为 None
+            log.actual_duration = int(duration_str) if duration_str else None
         except (ValueError, TypeError):
-            # 如果用户输入了无效内容（比如文字），也将其安全地设置为 0
-            log.actual_duration = 0
+            # 如果用户输入了无效内容（比如文字），也将其安全地设置为 None
+            log.actual_duration = None
 
-        # 安全地处理 mood，防止其为 None
+        # 安全地处理 mood，允许其为 None
         try:
             mood_str = request.form.get('mood')
-            # 如果 mood_str 有内容，则转换为整数；否则，使用一个合理的默认值，比如 3
-            # 如果你的默认心情不是3，可以修改这个值
-            log.mood = int(mood_str) if mood_str else 3
+            # 如果 mood_str 有内容，则转换为整数；否则，设置为 None
+            log.mood = int(mood_str) if mood_str else None
         except (ValueError, TypeError):
-            # 如果用户输入了无效内容，也使用默认值
-            log.mood = 3
-
-        # --- 结束修改区域 ---
+            # 如果用户输入了无效内容，也设置为 None
+            log.mood = None
 
         # 提交会话，将更新保存到数据库
         db.session.commit()
