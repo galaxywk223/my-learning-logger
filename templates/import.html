@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% block title %}导入数据{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="h4 mb-0">从 JSON 备份文件恢复数据</h2>
+                </div>
+                <div class="card-body">
+                    <p class="card-text text-danger">
+                        <strong>警告：</strong>此操作将会清空当前数据库中的所有数据，然后从您上传的备份文件中恢复。请在设置页面执行此操作。
+                    </p>
+                    <div class="text-center">
+                        <a href="{{ url_for('main.settings') }}" class="btn btn-primary">前往设置页面</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

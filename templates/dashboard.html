@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+
+{% block title %}仪表盘{% endblock %}
+
+{% block content %}
+<style>
+    /* 为仪表盘卡片添加增强的视觉样式 */
+    .dashboard-card {
+        text-decoration: none;
+        color: inherit;
+        display: block;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+        border-radius: var(--border-radius-md);
+        background-color: var(--color-card-bg);
+        border: 1px solid #E5E7EB;
+        border-top-width: 4px; /* 为彩色上边框留出空间 */
+        overflow: hidden; /* 确保内容在圆角内 */
+    }
+
+    /* 根据卡片类型设置不同的上边框颜色 */
+    .card-records { border-top-color: var(--color-primary); }
+    .card-charts { border-top-color: var(--color-accent); }
+    .card-countdown { border-top-color: #4338CA; } /* 深靛蓝色 */
+
+    .dashboard-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+    }
+
+    .dashboard-card .card-body {
+        padding: 2rem;
+        text-align: center;
+    }
+
+    /* 图标容器样式 */
+    .icon-container {
+        width: 64px;
+        height: 64px;
+        margin: 0 auto 1.5rem auto;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--color-primary-light); /* 默认背景色 */
+    }
+
+    .icon-container i {
+        width: 32px;
+        height: 32px;
+        color: var(--color-primary-dark); /* 默认图标颜色 */
+    }
+
+    /* 为不同卡片设置不同的图标容器颜色 */
+    .icon-container-records { background-color: var(--color-primary-light); }
+    .icon-container-records i { color: var(--color-primary-dark); }
+
+    .icon-container-charts { background-color: var(--color-accent-light); }
+    .icon-container-charts i { color: var(--color-accent-dark); }
+
+    .icon-container-countdown { background-color: #C7D2FE; } /* 浅靛蓝色 */
+    .icon-container-countdown i { color: #4338CA; } /* 深靛蓝色 */
+
+
+    .card-title-custom {
+        font-family: 'Poppins', sans-serif;
+        font-size: 1.3rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+    }
+
+    .card-text-custom {
+        color: var(--color-text-medium);
+        font-size: 1rem;
+        line-height: 1.5;
+    }
+</style>
+
+<div class="page-header text-center">
+    <h1>学习记录器</h1>
+    <p class="lead text-secondary">今天你做别人不愿意做的事，明天你就能做到别人做不到的事！</p>
+</div>
+
+<div class="row g-4 justify-content-center">
+    <!-- 卡片 1: 学习记录表 -->
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('records.list_records') }}" class="dashboard-card card-records">
+            <div class="card-body">
+                <div class="icon-container icon-container-records">
+                    <i data-lucide="notebook-pen"></i>
+                </div>
+                <h5 class="card-title-custom">学习记录表</h5>
+                <p class="card-text-custom">查看、添加和管理您的所有学习日志。</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- 卡片 2: 效率趋势图 -->
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('charts.chart_page') }}" class="dashboard-card card-charts">
+            <div class="card-body">
+                 <div class="icon-container icon-container-charts">
+                    <i data-lucide="line-chart"></i>
+                </div>
+                <h5 class="card-title-custom">效率趋势图</h5>
+                <p class="card-text-custom">通过图表可视化的学习效率变化。</p>
+            </div>
+        </a>
+    </div>
+
+    <!-- 卡片 3: 目标倒计时 -->
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('countdown.list_events') }}" class="dashboard-card card-countdown">
+            <div class="card-body">
+                 <div class="icon-container icon-container-countdown">
+                    <i data-lucide="flag"></i>
+                </div>
+                <h5 class="card-title-custom">目标倒计时</h5>
+                <p class="card-text-custom">设置和追踪您的重要目标和截止日期。</p>
+            </div>
+        </a>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 确保在重新加载页面时也能正确创建图标
+    lucide.createIcons();
+</script>
+{% endblock %}

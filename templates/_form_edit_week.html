@@ -1,0 +1,25 @@
+<div class="modal-header">
+    <h5 class="modal-title" id="formModalLabel">
+        <i data-lucide="target" class="me-2"></i>
+        编辑周效率
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form action="{{ url_for('records.edit_week', year=year, week_num=week_num) }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);">
+    <div class="modal-body">
+        <div class="alert alert-danger error-message" style="display: none;"></div>
+        <div class="mb-3">
+            <label for="efficiency" class="form-label"><strong>第 {{ week_num }} 周 ({{ year }}) 效率评分</strong></label>
+            <input type="number" class="form-control" id="efficiency" name="efficiency" value="{{ weekly_data.efficiency if weekly_data else '' }}" placeholder="请输入效率评分 (例如: 4.5)" required step="0.1">
+            <div class="form-text">为本周效率输入一个数字评分。</div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+            <i data-lucide="save"></i>
+            <span>保存</span>
+        </button>
+    </div>
+</form>

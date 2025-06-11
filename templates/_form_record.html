@@ -1,0 +1,67 @@
+<div class="modal-header">
+    <h5 class="modal-title" id="formModalLabel">
+        <i data-lucide="notebook-pen" class="me-2"></i>
+        {{ '编辑记录' if log else '添加新纪录' }}
+    </h5>
+    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+</div>
+
+<form action="{{ action_url }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);">
+    <div class="modal-body">
+        <div class="alert alert-danger error-message" style="display: none;"></div>
+        <div class="row g-3">
+            <!-- Left Column -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="log_date" class="form-label">日期</label>
+                    <input type="date" class="form-control" id="log_date" name="log_date" value="{{ log.log_date if log else default_date.strftime('%Y-%m-%d') }}" required>
+                </div>
+                <div class="mb-3">
+                    <label for="time_slot" class="form-label">时间段</label>
+                    <input type="text" class="form-control" id="time_slot" name="time_slot" value="{{ log.time_slot if log else '' }}" placeholder="例如: 9:00 - 11:30">
+                </div>
+                <div class="mb-3">
+                    <label for="actual_duration" class="form-label">实际时长 (分钟)</label>
+                    <input type="number" class="form-control" id="actual_duration" name="actual_duration" value="{{ log.actual_duration if log else '' }}" placeholder="例如: 120">
+                </div>
+            </div>
+            <!-- Right Column -->
+            <div class="col-md-6">
+                <div class="mb-3">
+                    <label for="task" class="form-label">任务</label>
+                    <input type="text" class="form-control" id="task" name="task" value="{{ log.task if log else '' }}" required placeholder="学习的具体内容">
+                </div>
+                 <div class="mb-3">
+                    <label for="category" class="form-label">分类</label>
+                    <input type="text" class="form-control" id="category" name="category" value="{{ log.category if log else '' }}" placeholder="例如: 编程, 英语">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">心情</label>
+                    <!-- MODIFIED: Added flex-nowrap, reduced gap and padding to prevent wrapping -->
+                    <div class="d-flex flex-nowrap gap-0">
+                         {% for val, emoji in {5: '😃', 4: '😊', 3: '😐', 2: '😟', 1: '😠'}.items() %}
+                        <div class="form-check form-check-inline me-0">
+                            <input class="btn-check" type="radio" name="mood" id="mood{{ val }}" value="{{ val }}" {% if log and log.mood == val %}checked{% endif %}>
+                            <label class="btn btn-outline-secondary" for="mood{{ val }}" style="font-size: 1.5rem; padding: 0.25rem 0.6rem;">{{ emoji }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            <!-- Full Width -->
+            <div class="col-12">
+                 <div class="mb-2">
+                    <label for="notes" class="form-label">笔记</label>
+                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="记录一些关键点或想法...">{{ log.notes if log else '' }}</textarea>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+        <button type="submit" class="btn btn-primary d-flex align-items-center gap-2">
+            <i data-lucide="save"></i>
+            <span>{{ submit_button_text }}</span>
+        </button>
+    </div>
+</form>

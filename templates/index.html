@@ -1,0 +1,371 @@
+{% extends "base.html" %}
+
+{% block title %}学习记录{% endblock %}
+
+{% block content %}
+<style>
+    /* --- 学习记录页专属样式 --- */
+
+    /* 页面头部 */
+    .page-header-records {
+        margin-bottom: 2rem;
+    }
+
+    /* 自定义折叠面板 */
+    .accordion-item {
+        border-color: #E5E7EB;
+        background-color: transparent;
+        border-radius: var(--border-radius-md) !important;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        box-shadow: var(--box-shadow);
+    }
+
+    .accordion-button {
+        background-color: var(--color-card-bg);
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--color-text-dark);
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary-dark);
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: var(--color-primary);
+    }
+
+    .accordion-button::after {
+        filter: invert(40%) sepia(9%) saturate(200%) saturate(135%) hue-rotate(176deg) brightness(96%) contrast(94%);
+    }
+
+    .accordion-button:not(.collapsed)::after {
+        filter: none;
+    }
+
+    .accordion-button .action-btn {
+        color: var(--color-text-medium);
+    }
+
+    .accordion-button:not(.collapsed) .action-btn {
+        color: var(--color-primary-dark);
+    }
+
+
+    .accordion-body {
+        padding: 1rem 1.5rem;
+        background-color: #FDFDFD;
+    }
+
+    /* 每日记录卡片 */
+    .day-card {
+        border: 1px solid #F3F4F6;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .day-card .card-header {
+        background-color: #F9FAFB;
+        font-weight: 500;
+    }
+
+    /* 记录表格 */
+    .log-table {
+        margin-bottom: 0;
+        table-layout: fixed; /* 关键：固定列宽 */
+        width: 100%;
+    }
+
+    .log-table th {
+        font-weight: 500;
+        color: var(--color-text-medium);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        padding: 0.75rem;
+    }
+
+    .log-table td {
+        vertical-align: middle;
+        padding: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis; /* 超出部分显示省略号 */
+    }
+
+    /* 操作按钮 */
+    .action-btn {
+        color: var(--color-text-medium);
+        padding: 0.25rem 0.5rem;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+        color: var(--color-primary);
+    }
+
+    .action-btn.delete:hover {
+        color: #EF4444; /* red-500 */
+    }
+
+    .action-btn i {
+        width: 18px;
+        height: 18px;
+    }
+
+    .log-notes td {
+        white-space: normal; /* 笔记行可以换行 */
+    }
+
+    .mood-icon {
+        font-size: 1.25rem;
+    }
+</style>
+
+<!-- 页面头部：标题、排序和添加按钮 -->
+<div class="page-header-records d-flex justify-content-between align-items-center">
+    <div>
+        <h1>学习记录</h1>
+        <p class="lead text-secondary mb-0">按周查看您的所有学习日志。</p>
+    </div>
+    <div class="d-flex align-items-center gap-2">
+        <div class="btn-group">
+            <a href="{{ url_for('records.list_records', sort='desc') }}"
+               class="btn btn-sm btn-outline-secondary {% if current_sort == 'desc' %}active{% endif %}">降序</a>
+            <a href="{{ url_for('records.list_records', sort='asc') }}"
+               class="btn btn-sm btn-outline-secondary {% if current_sort == 'asc' %}active{% endif %}">升序</a>
+        </div>
+        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal"
+                data-bs-target="#formModal" data-url="{{ url_for('records.get_add_form') }}">
+            <i data-lucide="plus-circle"></i>
+            <span>添加新记录</span>
+        </button>
+    </div>
+</div>
+
+
+<!-- 如果需要初始设置，显示提示信息 -->
+{% if setup_needed %}
+<div class="alert alert-warning text-center">
+    <h4 class="alert-heading">请先完成初始设置</h4>
+    <p>为了开始记录，您需要先在设置页面中指定每周的起始日期。</p>
+    <a href="{{ url_for('main.settings') }}" class="btn btn-warning">前往设置</a>
+</div>
+{% else %}
+<!-- 周记录折叠面板 -->
+<div class="accordion" id="weeksAccordion">
+    {% set palettes = ['palette-purple', 'palette-green', 'palette-blue', 'palette-yellow', 'palette-red'] %}
+    {% for week in structured_logs %}
+    {% set palette_class = palettes[loop.index0 % palettes|length] %}
+    <div class="accordion-item {{ palette_class }}">
+        <h2 class="accordion-header" id="heading-{{ week.year }}-{{ week.week_num }}">
+            <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
+                <span class="flex-grow-1 me-3">{{ week.year }} 年 - 第 {{ week.week_num }} 周</span>
+                <!-- MODIFIED: Always show the weekly efficiency section -->
+                <span class="d-flex align-items-center" onclick="event.stopPropagation();">
+                        {% if week.efficiency %}
+                            <span class="badge bg-secondary">周效率: {{ week.efficiency }}</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark border">未设置周效率</span>
+                        {% endif %}
+                        <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
+                           data-url="{{ url_for('records.get_edit_week_form', year=week.year, week_num=week.week_num) }}"
+                           title="设置/编辑周效率"
+                           onclick="event.stopPropagation();">
+                            <i data-lucide="edit-3"></i>
+                        </a>
+                    </span>
+            </button>
+        </h2>
+        <div id="collapse-{{ week.year }}-{{ week.week_num }}"
+             class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#weeksAccordion">
+            <div class="accordion-body">
+                {% for day in week.days %}
+                <div class="card day-card day-card-{{ loop.index0 % 2 }}">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span>{{ day.date.strftime('%Y-%m-%d') }} (周{{ ['一','二','三','四','五','六','日'][day.date.weekday()] }})</span>
+                        <!-- MODIFIED: Always show the daily efficiency section -->
+                        <span class="d-flex align-items-center" onclick="event.stopPropagation();">
+                        {% if week.efficiency %}
+                            <span class="badge bg-secondary">周效率: {{ week.efficiency }}</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark border">未设置周效率</span>
+                        {% endif %}
+                        <a href="#" class="action-btn ms-2" data-bs-toggle="modal" ...>
+                            <i data-lucide="edit-3"></i>
+                        </a>
+                    </span>
+                    </div>
+                    <div class="card-body p-0">
+                        <table class="table table-hover log-table">
+                            <thead>
+                            <tr>
+                                <th style="width: 45%;">任务</th>
+                                <th style="width: 25%;">时间段</th>
+                                <th style="width: 15%;">时长</th>
+                                <th style="width: 5%;" class="text-center">心情</th>
+                                <th style="width: 10%;" class="text-end"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            {% for log in day.logs %}
+                            <tr>
+                                <td title="{{ log.task }}"><strong>{{ log.task }}</strong></td>
+                                <td title="{{ log.time_slot }}">{{ log.time_slot }}</td>
+                                <td>{{ log.actual_duration }} 分钟</td>
+                                <td class="text-center mood-icon">{{ log.mood | mood_emoji }}</td>
+                                <td class="text-end">
+                                    <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#formModal"
+                                       data-url="{{ url_for('records.get_edit_form', log_id=log.id) }}" title="编辑">
+                                        <i data-lucide="file-pen-line"></i>
+                                    </a>
+                                    <a href="#" class="action-btn delete" onclick="confirmDelete(event, {{ log.id }})"
+                                       title="删除">
+                                        <i data-lucide="trash-2"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% if log.notes %}
+                            <tr class="log-notes">
+                                <td colspan="5" class="text-muted small ps-4 py-1" title="{{ log.notes }}">{{ log.notes
+                                    }}
+                                </td>
+                            </tr>
+                            {% endif %}
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                {% else %}
+                <p class="text-center text-muted p-3">这一周没有记录。</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center p-5">
+        <h3>还没有任何记录</h3>
+        <p class="text-muted">点击右上角的“添加新记录”按钮，开始你的第一条学习日志吧！</p>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- 全局模态框，用于加载各种表单 -->
+<div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content">
+            <!-- 表单内容将通过 JavaScript 动态加载到这里 -->
+        </div>
+    </div>
+</div>
+
+<!-- 删除确认的隐藏表单 -->
+<form id="deleteForm" method="POST" style="display: none;">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
+</form>
+
+{% endblock %}
+
+
+{% block scripts %}
+<script>
+    // 动态加载模态框内容
+    const formModal = document.getElementById('formModal');
+    formModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        const url = button.getAttribute('data-url');
+        const modalContent = formModal.querySelector('.modal-content');
+
+        fetch(url)
+            .then(response => response.text())
+            .then(html => {
+                modalContent.innerHTML = html;
+                // 重新初始化新加载内容中的 Lucide 图标
+                lucide.createIcons();
+                // 如果表单内有需要特殊处理的JS，可以在这里执行
+            })
+            .catch(err => console.error('Failed to load modal content:', err));
+    });
+
+    // 提交 AJAX 表单
+    function submitAjaxForm(form) {
+        const url = form.action;
+        const method = form.method;
+        const formData = new FormData(form);
+
+        fetch(url, {
+            method: method,
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // 成功后关闭模态框并刷新页面
+                    const modalInstance = bootstrap.Modal.getInstance(formModal);
+                    if (modalInstance) {
+                        modalInstance.hide();
+                    }
+                    location.reload();
+                } else {
+                    // 在模态框内显示错误信息
+                    const errorDiv = form.querySelector('.error-message');
+                    if (errorDiv) {
+                        errorDiv.textContent = data.message || '操作失败，请重试。';
+                        errorDiv.style.display = 'block';
+                    }
+                }
+            })
+            .catch(err => {
+                console.error('AJAX form submission error:', err);
+                const errorDiv = form.querySelector('.error-message');
+                if (errorDiv) {
+                    errorDiv.textContent = '发生网络错误，请稍后重试。';
+                    errorDiv.style.display = 'block';
+                }
+            });
+    }
+
+    // 删除确认
+    function confirmDelete(event, logId) {
+        event.preventDefault();
+        if (confirm('确定要删除这条记录吗？此操作无法撤销。')) {
+            const form = document.getElementById('deleteForm');
+            form.action = `/records/delete/${logId}`;
+
+            fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        alert('删除失败: ' + data.message);
+                    }
+                })
+                .catch(err => {
+                    console.error('Delete error:', err);
+                    alert('删除时发生网络错误。');
+                });
+        }
+    }
+
+
+    // 重新激活所有图标
+    lucide.createIcons();
+</script>
+{% endblock %}

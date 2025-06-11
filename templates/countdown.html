@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}目标倒计时{% endblock %}
+
+{% block content %}
+<style>
+    .time-card {
+        background: #fff;
+        border-radius: var(--border-radius-md);
+        padding: 1.25rem 1.5rem;
+        box-shadow: var(--box-shadow);
+        border-left: 5px solid #6366F1;
+    }
+
+    .time-card #real-time-clock {
+        font-family: 'Poppins', sans-serif;
+        font-size: 2.5rem;
+        font-weight: 600;
+        color: var(--color-text-dark);
+    }
+
+    .time-card #relative-time {
+        font-size: 1rem;
+        font-weight: 500;
+        color: #6366F1;
+    }
+
+    .countdown-card {
+        border-radius: var(--border-radius-md);
+        overflow: hidden;
+        box-shadow: var(--box-shadow);
+        position: relative;
+        padding-top: 2.5rem; /* 为顶部的彩色条留出空间 */
+    }
+
+    .countdown-card .card-body {
+        text-align: center;
+    }
+
+    .countdown-card-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 600;
+    }
+
+    .countdown-card .time-display {
+        display: flex;
+        justify-content: center;
+        gap: 1rem;
+        margin: 1.5rem 0;
+    }
+
+    .countdown-card .time-segment {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .countdown-card .time-value {
+        font-family: 'Poppins', sans-serif;
+        font-size: 3rem;
+        font-weight: 700;
+        line-height: 1;
+    }
+
+    .countdown-card .time-label {
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        color: var(--color-text-medium);
+    }
+
+    .countdown-card .target-date {
+        font-size: 0.9rem;
+        color: var(--color-text-medium);
+    }
+
+    /* Active Card Styles */
+    .countdown-card.active .countdown-card-header {
+        background-color: var(--color-primary);
+    }
+
+    .countdown-card.active .time-value {
+        color: var(--color-primary-dark);
+    }
+
+    /* Expired Card Styles */
+    .countdown-card.expired {
+        background-color: #F1F5F9;
+    }
+
+    .countdown-card.expired .countdown-card-header {
+        background-color: #94A3B8;
+    }
+
+    .countdown-card.expired .time-display, .countdown-card.expired .target-date {
+        opacity: 0.6;
+    }
+
+    .action-buttons {
+        position: absolute;
+        top: 4px;
+        right: 10px;
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .action-btn {
+        background: rgba(255, 255, 255, 0.2);
+        color: #fff;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.2s;
+    }
+
+    .action-btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+        color: #fff;
+    }
+
+    .action-btn i {
+        width: 16px;
+        height: 16px;
+    }
+
+    h3.mt-4, h3.mt-5 {
+        color: #f8f9fa;
+        text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
+    }
+</style>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>目标倒计时</h1>
+        <p class="lead text-secondary mb-0">追踪您的重要目标和截止日期。</p>
+    </div>
+    <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#formModal"
+            data-url="{{ url_for('countdown.get_add_form') }}">
+        <i data-lucide="plus-circle"></i>
+        <span>添加新目标</span>
+    </button>
+</div>
+
+<!-- Time Card -->
+<div class="row mb-4 justify-content-center">
+    <div class="col-lg-6 col-md-8">
+        <div class="time-card">
+            <div class="d-flex justify-content-between align-items-center">
+                <span id="real-time-clock">--:--:--</span>
+                <span id="relative-time">{{ current_relative_time }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Countdown Cards -->
+<hr>
+<h3 class="mt-4 mb-3">进行中</h3>
+<div class="row g-4">
+    {% for event in active_events %}
+    <div class="col-lg-4 col-md-6">
+        <div class="card countdown-card active" data-target-time="{{ event.target_iso_utc }}">
+            <div class="countdown-card-header">{{ event.title }}</div>
+            <div class="card-body">
+                <div class="time-display">
+                    <div class="time-segment">
+                        <span class="time-value" data-unit="days">0</span>
+                        <span class="time-label">天</span>
+                    </div>
+                    <div class="time-segment">
+                        <span class="time-value" data-unit="hours">0</span>
+                        <span class="time-label">小时</span>
+                    </div>
+                    <div class="time-segment">
+                        <span class="time-value" data-unit="minutes">0</span>
+                        <span class="time-label">分钟</span>
+                    </div>
+                    <div class="time-segment">
+                        <span class="time-value" data-unit="seconds">0</span>
+                        <span class="time-label">秒</span>
+                    </div>
+                </div>
+                <p class="target-date">目标: {{ event.target_datetime_beijing.strftime('%Y-%m-%d %H:%M') }}</p>
+            </div>
+            <div class="action-buttons">
+                <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#formModal"
+                   data-url="{{ url_for('countdown.get_edit_form', event_id=event.id) }}"><i
+                        data-lucide="pencil"></i></a>
+                <a href="#" class="action-btn" onclick="confirmDelete(event, {{ event.id }})"><i
+                        data-lucide="trash-2"></i></a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <p class="text-center text-muted">没有正在进行的倒计时目标。添加一个开始吧！</p>
+    </div>
+    {% endfor %}
+</div>
+
+<h3 class="mt-5 mb-3">已过期</h3>
+<div class="row g-4">
+    {% for event in expired_events %}
+    <div class="col-lg-4 col-md-6">
+        <div class="card countdown-card expired">
+            <div class="countdown-card-header">{{ event.title }}</div>
+            <div class="card-body">
+                <div class="time-display">
+                    <div class="time-segment">
+                        <span class="time-value">--</span>
+                    </div>
+                </div>
+                <p class="target-date">已于 {{ event.target_datetime_beijing.strftime('%Y-%m-%d') }} 结束</p>
+            </div>
+            <div class="action-buttons">
+                <a href="#" class="action-btn" onclick="confirmDelete(event, {{ event.id }})"><i
+                        data-lucide="trash-2"></i></a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="col-12">
+        <p class="text-center text-muted">没有已过期的目标。</p>
+    </div>
+    {% endfor %}
+</div>
+
+
+<!-- Modal and Delete Form -->
+<div class="modal fade" id="formModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content"></div>
+    </div>
+</div>
+<form id="deleteForm" method="POST" style="display: none;"></form>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    lucide.createIcons();
+
+    // --- Real-time Clock ---
+    const clockElement = document.getElementById('real-time-clock');
+    if (clockElement) {
+        function updateClock() {
+            clockElement.textContent = new Date().toTimeString().split(' ')[0];
+        }
+
+        setInterval(updateClock, 1000);
+        updateClock();
+    }
+
+    // --- Countdown Timers ---
+    const countdownCards = document.querySelectorAll('.countdown-card[data-target-time]');
+
+    function updateCountdowns() {
+        const now = new Date();
+        countdownCards.forEach(card => {
+            const targetTime = new Date(card.dataset.targetTime);
+            const diff = targetTime - now;
+
+            if (diff <= 0) {
+                // In case JS runs faster than page reload after expiration
+                card.style.opacity = '0.5';
+                return;
+            }
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+            card.querySelector('[data-unit="days"]').textContent = days;
+            card.querySelector('[data-unit="hours"]').textContent = hours;
+            card.querySelector('[data-unit="minutes"]').textContent = minutes;
+            card.querySelector('[data-unit="seconds"]').textContent = seconds;
+        });
+    }
+
+    if (countdownCards.length > 0) {
+        setInterval(updateCountdowns, 1000);
+        updateCountdowns();
+    }
+
+    // --- Modal & Form Logic ---
+    const formModal = document.getElementById('formModal');
+    formModal.addEventListener('show.bs.modal', function (event) {
+        const button = event.relatedTarget;
+        fetch(button.dataset.url)
+            .then(response => response.text())
+            .then(html => {
+                formModal.querySelector('.modal-content').innerHTML = html;
+                lucide.createIcons();
+            });
+    });
+
+    function submitAjaxForm(form) {
+        fetch(form.action, {
+            method: form.method,
+            body: new FormData(form),
+            headers: {'X-Requested-With': 'XMLHttpRequest'}
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    bootstrap.Modal.getInstance(formModal).hide();
+                    location.reload();
+                } else {
+                    alert('操作失败: ' + (data.message || '未知错误'));
+                }
+            });
+    }
+
+    function confirmDelete(event, eventId) {
+        event.preventDefault();
+        if (confirm('确定要删除这个目标吗？此操作无法撤销。')) {
+            const form = document.getElementById('deleteForm');
+            form.action = `/countdown/delete/${eventId}`;
+            fetch(form.action, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}})
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) location.reload();
+                    else alert('删除失败: ' + data.message);
+                });
+        }
+    }
+</script>
+{% endblock %}
