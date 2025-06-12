@@ -157,7 +157,6 @@
     <a href="{{ url_for('main.settings') }}" class="btn btn-warning">前往设置</a>
 </div>
 {% else %}
-<!-- 周记录折叠面板 -->
 <div class="accordion" id="weeksAccordion">
     {% set palettes = ['palette-purple', 'palette-green', 'palette-blue', 'palette-yellow', 'palette-red'] %}
     {% for week in structured_logs %}
@@ -167,7 +166,6 @@
             <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
                 <span class="flex-grow-1 me-3">{{ week.year }} 年 - 第 {{ week.week_num }} 周</span>
-                <!-- MODIFIED: Always show the weekly efficiency section -->
                 <span class="d-flex align-items-center" onclick="event.stopPropagation();">
                         {% if week.efficiency %}
                             <span class="badge bg-secondary">周效率: {{ week.efficiency }}</span>
@@ -190,17 +188,20 @@
                 <div class="card day-card day-card-{{ loop.index0 % 2 }}">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>{{ day.date.strftime('%Y-%m-%d') }} (周{{ ['一','二','三','四','五','六','日'][day.date.weekday()] }})</span>
-                        <!-- MODIFIED: Always show the daily efficiency section -->
+
                         <span class="d-flex align-items-center" onclick="event.stopPropagation();">
-                        {% if week.efficiency %}
-                            <span class="badge bg-secondary">周效率: {{ week.efficiency }}</span>
-                        {% else %}
-                            <span class="badge bg-light text-dark border">未设置周效率</span>
-                        {% endif %}
-                        <a href="#" class="action-btn ms-2" data-bs-toggle="modal" ...>
-                            <i data-lucide="edit-3"></i>
-                        </a>
-                    </span>
+                            {% if day.efficiency %}
+                                <span class="badge bg-info text-dark">日效率: {{ day.efficiency }}</span>
+                            {% else %}
+                                <span class="badge bg-light text-dark border">未设置日效率</span>
+                            {% endif %}
+                            <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
+                               data-url="{{ url_for('records.get_edit_day_form', iso_date=day.date.isoformat()) }}"
+                               title="设置/编辑日效率"
+                               onclick="event.stopPropagation();">
+                                <i data-lucide="edit-3"></i>
+                            </a>
+                        </span>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover log-table">
