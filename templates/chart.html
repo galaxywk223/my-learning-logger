@@ -39,58 +39,18 @@
         color: var(--color-text-medium);
     }
 
-    .kpi-card-duration {
-        border-left-color: #F97316;
-    }
+    .kpi-card-duration { border-left-color: #F97316; }
+    .kpi-card-duration .icon-wrapper { background-color: #FFEDD5; }
+    .kpi-card-duration .icon-wrapper i { color: #EA580C; }
+    .kpi-card-days { border-left-color: #EF4444; }
+    .kpi-card-days .icon-wrapper { background-color: #FEE2E2; }
+    .kpi-card-days .icon-wrapper i { color: #DC2626; }
+    .kpi-card-avg { border-left-color: var(--color-primary); }
+    .kpi-card-avg .icon-wrapper { background-color: var(--color-primary-light); }
+    .kpi-card-avg .icon-wrapper i { color: var(--color-primary-dark); }
 
-    .kpi-card-duration .icon-wrapper {
-        background-color: #FFEDD5;
-    }
-
-    .kpi-card-duration .icon-wrapper i {
-        color: #EA580C;
-    }
-
-    .kpi-card-days {
-        border-left-color: #EF4444;
-    }
-
-    .kpi-card-days .icon-wrapper {
-        background-color: #FEE2E2;
-    }
-
-    .kpi-card-days .icon-wrapper i {
-        color: #DC2626;
-    }
-
-    .kpi-card-avg {
-        border-left-color: var(--color-primary);
-    }
-
-    .kpi-card-avg .icon-wrapper {
-        background-color: var(--color-primary-light);
-    }
-
-    .kpi-card-avg .icon-wrapper i {
-        color: var(--color-primary-dark);
-    }
-
-    .chart-container-wrapper {
-        height: 400px;
-        position: relative;
-    }
-
-    /* 只固定按钮组的样式 */
-    .chart-view-buttons {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 1rem; /* 让按钮固定在距离顶部 1rem 的位置 */
-        z-index: 1020;
-
-        /* 关键: 当一个 flex 布局的子元素要使用 sticky 定位时,
-           需要此属性来确保它能“脱离”父元素的垂直对齐约束 */
-        align-self: flex-start;
-    }
+    .chart-container-wrapper { height: 400px; position: relative; }
+    .chart-view-buttons { position: -webkit-sticky; position: sticky; top: 1rem; z-index: 1020; align-self: flex-start; }
 </style>
 
 <div class="page-header d-flex justify-content-between align-items-center">
@@ -118,7 +78,7 @@
         <div class="kpi-card kpi-card-duration">
             <div class="icon-wrapper"><i data-lucide="clock"></i></div>
             <div>
-                <div class="kpi-value">{{ kpis.total_hours }}</div>
+                <div class="kpi-value" id="kpi-total-hours">...</div>
                 <div class="kpi-label">总学习时长 (小时)</div>
             </div>
         </div>
@@ -127,7 +87,7 @@
         <div class="kpi-card kpi-card-days">
             <div class="icon-wrapper"><i data-lucide="calendar-days"></i></div>
             <div>
-                <div class="kpi-value">{{ kpis.total_days }}</div>
+                <div class="kpi-value" id="kpi-total-days">...</div>
                 <div class="kpi-label">总学习天数</div>
             </div>
         </div>
@@ -136,7 +96,7 @@
         <div class="kpi-card kpi-card-avg">
             <div class="icon-wrapper"><i data-lucide="bar-chart-horizontal"></i></div>
             <div>
-                <div class="kpi-value">{{ kpis.avg_daily_minutes }}</div>
+                <div class="kpi-value" id="kpi-avg-minutes">...</div>
                 <div class="kpi-label">平均每日时长 (分钟)</div>
             </div>
         </div>
@@ -166,7 +126,6 @@
     </div>
 </div>
 {% endif %}
-
 {% endblock %}
 
 {% block scripts %}
@@ -174,123 +133,92 @@
 <script>
     lucide.createIcons();
 
-    {% if not setup_needed and weekly_duration_data %}
+    // 只在需要渲染图表的页面执行JS代码
+    {% if not setup_needed %}
 
-    // 这一部分必须由模板引擎解析，用来将后端数据传递给前端
-    const dataStore = {
-        weekly: {
-            duration: JSON.parse('{{ weekly_duration_data|tojson }}'),
-            efficiency: JSON.parse('{{ weekly_efficiency_data|tojson }}')
-        },
-        daily: {
-            duration: JSON.parse('{{ daily_duration_data|tojson }}'),
-            efficiency: JSON.parse('{{ daily_efficiency_data|tojson }}')
-        }
-    };
+    // 全局变量，用于存储从API获取的数据和图表实例
+    let dataStore = {};
+    let durationChart, efficiencyChart;
 
-    // --- 关键修正：将所有纯 JS 代码包裹在 raw 标签中 ---
-    {% raw %}
+    // 当DOM加载完毕后，执行主函数
     document.addEventListener('DOMContentLoaded', () => {
+
         const durationCtx = document.getElementById('durationChart').getContext('2d');
         const efficiencyCtx = document.getElementById('efficiencyChart').getContext('2d');
+        const weeklyBtn = document.getElementById('viewWeekly');
+        const dailyBtn = document.getElementById('viewDaily');
 
         const commonOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             interaction: {mode: 'index', intersect: false},
             plugins: {
                 legend: {position: 'bottom', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
-                tooltip: {
-                    backgroundColor: '#1f2937', titleFont: {size: 14}, bodyFont: {size: 12},
-                    padding: 10, cornerRadius: 6, boxPadding: 3
-                }
+                tooltip: { backgroundColor: '#1f2937', titleFont: {size: 14}, bodyFont: {size: 12}, padding: 10, cornerRadius: 6, boxPadding: 3 }
             },
             scales: {x: {grid: {display: false}}}
         };
 
-        const durationChartConfig = {
-            type: 'bar',
-            options: {
-                ...commonOptions,
-                scales: {
-                    ...commonOptions.scales,
-                    y: {title: {display: true, text: '学习时长 (小时)'}, grace: '5%'}
-                }
-            }
-        };
+        const durationChartConfig = { type: 'bar', options: { ...commonOptions, scales: { ...commonOptions.scales, y: {title: {display: true, text: '学习时长 (小时)'}, grace: '5%'} } } };
+        const efficiencyChartConfig = { type: 'bar', options: { ...commonOptions, scales: { ...commonOptions.scales, y: {title: {display: true, text: '学习效率'}, min: 0, max: 5, ticks: {stepSize: 1}} } } };
 
-        const efficiencyChartConfig = {
-            type: 'bar',
-            options: {
-                ...commonOptions,
-                scales: {
-                    ...commonOptions.scales,
-                    y: {title: {display: true, text: '学习效率'}, min: 0, max: 5, ticks: {stepSize: 1}}
-                }
-            }
-        };
+        // 初始化空图表
+        durationChart = new Chart(durationCtx, durationChartConfig);
+        efficiencyChart = new Chart(efficiencyCtx, efficiencyChartConfig);
 
-        let durationChart = new Chart(durationCtx, durationChartConfig);
-        let efficiencyChart = new Chart(efficiencyCtx, efficiencyChartConfig);
+        // --- 主函数：获取数据并渲染 ---
+        async function fetchDataAndRender() {
+            try {
+                // 1. 发起API请求 (*** 已修正此处的URL ***)
+                const response = await fetch("/charts/api/data");
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.statusText}`);
+                }
+                const data = await response.json();
+
+                // 2. 将获取的数据存到全局变量
+                dataStore = {
+                    weekly: { duration: data.weekly_duration_data, efficiency: data.weekly_efficiency_data },
+                    daily: { duration: data.daily_duration_data, efficiency: data.daily_efficiency_data }
+                };
+
+                // 3. 更新KPI卡片
+                document.getElementById('kpi-total-hours').textContent = data.kpis.total_hours;
+                document.getElementById('kpi-total-days').textContent = data.kpis.total_days;
+                document.getElementById('kpi-avg-minutes').textContent = data.kpis.avg_daily_minutes;
+
+                // 4. 首次渲染图表 (默认周视图)
+                updateCharts('weekly');
+
+            } catch (error) {
+                console.error('获取图表数据时出错:', error);
+                // 可以在页面上显示一个更友好的错误信息
+                document.querySelector('.page-header').insertAdjacentHTML('afterend', '<div class="alert alert-danger">无法加载图表数据，请稍后重试。</div>');
+            }
+        }
 
         function updateCharts(view) {
+            // 确保 dataStore 已被填充
+            if (!dataStore[view]) return;
+
             durationChart.data = {
                 labels: dataStore[view].duration.labels,
                 datasets: [
-                    {
-                        type: 'bar',
-                        label: '实际时长',
-                        data: dataStore[view].duration.actuals,
-                        backgroundColor: 'rgba(251, 146, 60, 0.5)',
-                        order: 2
-                    },
-                    {
-                        type: 'line',
-                        label: '趋势',
-                        data: dataStore[view].duration.trends,
-                        borderColor: '#B45309',
-                        tension: 0.4,
-                        fill: false,
-                        pointRadius: 0,
-                        borderWidth: 2.5,
-                        order: 1
-                    }
+                    { type: 'bar', label: '实际时长', data: dataStore[view].duration.actuals, backgroundColor: 'rgba(251, 146, 60, 0.5)', order: 2 },
+                    { type: 'line', label: '趋势', data: dataStore[view].duration.trends, borderColor: '#B45309', tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1 }
                 ]
             };
-
             efficiencyChart.data = {
                 labels: dataStore[view].efficiency.labels,
                 datasets: [
-                    {
-                        type: 'bar',
-                        label: '实际效率',
-                        data: dataStore[view].efficiency.actuals,
-                        backgroundColor: 'rgba(248, 113, 113, 0.5)',
-                        order: 2,
-                        barPercentage: dataStore[view].efficiency.actuals.map(v => v === null ? 0 : 1),
-                    },
-                    {
-                        type: 'line',
-                        label: '趋势',
-                        data: dataStore[view].efficiency.trends,
-                        borderColor: '#991B1B',
-                        tension: 0.4,
-                        fill: false,
-                        pointRadius: 0,
-                        borderWidth: 2.5,
-                        order: 1,
-                        spanGaps: true
-                    }
+                    { type: 'bar', label: '实际效率', data: dataStore[view].efficiency.actuals, backgroundColor: 'rgba(248, 113, 113, 0.5)', order: 2 },
+                    { type: 'line', label: '趋势', data: dataStore[view].efficiency.trends, borderColor: '#991B1B', tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1, spanGaps: true }
                 ]
             };
-
             durationChart.update();
             efficiencyChart.update();
         }
 
-        const weeklyBtn = document.getElementById('viewWeekly');
-        const dailyBtn = document.getElementById('viewDaily');
-
+        // 添加按钮事件监听
         weeklyBtn.addEventListener('click', () => {
             updateCharts('weekly');
             weeklyBtn.classList.add('active');
@@ -303,11 +231,9 @@
             weeklyBtn.classList.remove('active');
         });
 
-        updateCharts('weekly');
+        // 页面加载后，调用主函数
+        fetchDataAndRender();
     });
-    {% endraw %}
-    // --- 结束 raw 标签 ---
-
     {% endif %}
 </script>
 {% endblock %}

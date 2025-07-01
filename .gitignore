@@ -1,0 +1,19 @@
+# .gitignore
+
+# 忽略Python的缓存文件
+__pycache__/
+*.pyc
+
+# 忽略虚拟环境文件夹 (如果它在项目内)
+venv/
+.venv/
+env/
+.env
+
+# 忽略本地数据库文件
+*.db
+*.sqlite3
+
+# 忽略IDE的配置文件夹
+.idea/
+.vscode/
