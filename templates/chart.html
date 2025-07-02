@@ -164,7 +164,6 @@
     let dataStore = {};
     let durationChart, efficiencyChart;
 
-    // --- NEW: Chart.js plugin for stage annotations ---
     const stageAnnotationsPlugin = {
         id: 'stageAnnotations',
         afterDraw: (chart) => {
@@ -191,10 +190,9 @@
 
                 if (middlePixel < left || middlePixel > right) return;
 
-                // Draw line and text
-                ctx.strokeStyle = '#9CA3AF'; // gray-400
+                ctx.strokeStyle = '#9CA3AF';
                 ctx.lineWidth = 1;
-                ctx.fillStyle = '#4B5563'; // gray-600
+                ctx.fillStyle = '#4B5563';
 
                 ctx.beginPath();
                 ctx.moveTo(startPixel, bottom + 15);
@@ -218,13 +216,12 @@
         const weeklyBtn = document.getElementById('viewWeekly');
         const dailyBtn = document.getElementById('viewDaily');
 
-// 这是修改后的代码
         const createChartOptions = (yAxisTitle, yMin, yMax, yStep) => ({
             responsive: true, maintainAspectRatio: false,
             interaction: {mode: 'index', intersect: false},
-            layout: {padding: {bottom: 40}}, // Extra padding for annotations
+            layout: {padding: {bottom: 40}},
             plugins: {
-                legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}}, // <-- 修改这里
+                legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
                 tooltip: {
                     backgroundColor: '#1f2937',
                     titleFont: {size: 14},
@@ -233,19 +230,20 @@
                     cornerRadius: 6,
                     boxPadding: 3
                 },
-                stageAnnotations: {annotations: [], view: 'weekly'} // Custom plugin options
+                stageAnnotations: {annotations: [], view: 'weekly'}
             },
             scales: {
                 x: {
                     grid: {display: false},
-                    ticks: {display: false} // <-- 新增这一行来隐藏X轴的周次标签
+                    ticks: {display: false}
                 },
                 y: {
                     title: {display: true, text: yAxisTitle},
                     min: yMin,
                     max: yMax,
                     ticks: {stepSize: yStep},
-                    grace: '5%'
+                    grace: '5%',
+                    beginAtZero: true // Ensure Y-axis always starts at 0
                 }
             }
         });
@@ -255,9 +253,11 @@
             options: createChartOptions('学习时长 (小时)'),
             plugins: [stageAnnotationsPlugin]
         });
+
+        // --- FIXED: Removed hardcoded scale (0, 5, 1) ---
         efficiencyChart = new Chart(efficiencyCtx, {
             type: 'bar',
-            options: createChartOptions('学习效率', 0, 5, 1),
+            options: createChartOptions('学习效率'), // Let Chart.js determine the scale automatically
             plugins: [stageAnnotationsPlugin]
         });
 
@@ -334,7 +334,6 @@
                 }]
             };
 
-            // Update annotations based on view
             durationChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
             efficiencyChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
 

@@ -1,0 +1,27 @@
+{# templates/_todo_item.html #}
+
+<div class="todo-item {% if todo.is_completed %}completed{% endif %}">
+    <div class="form-check">
+        <input class="form-check-input todo-checkbox" type="checkbox" value=""
+               data-todo-id="{{ todo.id }}" {% if todo.is_completed %}checked{% endif %}>
+    </div>
+    <p class="todo-content">
+        {{ todo.content }}
+        {% if todo.due_date %}
+            <span class="todo-due-date ms-2"> (截止: {{ todo.due_date.strftime('%Y-%m-%d') }})</span>
+        {% endif %}
+    </p>
+    <span class="priority-badge priority-{{ todo.priority }}">
+        {% if todo.priority == 3 %}高{% elif todo.priority == 2 %}中{% else %}低{% endif %}
+    </span>
+    <div class="todo-actions">
+        <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editTodoModal-{{ todo.id }}">
+            <i data-lucide="edit-3"></i>
+        </button>
+        <form action="{{ url_for('todo.delete_todo', todo_id=todo.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这个待办事项吗？');">
+            <button type="submit" class="btn btn-sm btn-outline-danger">
+                <i data-lucide="trash-2"></i>
+            </button>
+        </form>
+    </div>
+</div>

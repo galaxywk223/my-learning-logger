@@ -47,6 +47,9 @@ def create_app(config_name='default'):
     from .blueprints.charts import charts_bp
     from .blueprints.countdown import countdown_bp
     from .blueprints.auth import auth_bp
+    from .blueprints.motto import motto_bp
+    # --- 新增：导入 todo 蓝图 ---
+    from .blueprints.todo import todo_bp
 
     # main_bp 是主页和设置，没有前缀，注册在根URL '/'
     app.register_blueprint(main_bp)
@@ -56,6 +59,10 @@ def create_app(config_name='default'):
     app.register_blueprint(charts_bp, url_prefix='/charts')
     app.register_blueprint(countdown_bp, url_prefix='/countdown')
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(motto_bp)
+    # --- 新增：注册 todo 蓝图 ---
+    app.register_blueprint(todo_bp)
+
 
     # 注册自定义命令行
     @app.cli.command('init-db')

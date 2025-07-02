@@ -1,7 +1,7 @@
 from . import db
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
-from datetime import date  # 确保导入 date
+from datetime import date, datetime  # 导入 datetime
 
 
 # ============================================================================
@@ -44,9 +44,12 @@ class User(UserMixin, db.Model):
     # ============================================================================
     stages = db.relationship('Stage', backref='user', lazy='dynamic', cascade="all, delete-orphan")
 
-    # 用户专有的数据保持不变
-    countdown_events = db.relationship('CountdownEvent', backref='user', lazy='dynamic')
-    settings = db.relationship('Setting', backref='user', lazy='dynamic')
+    # 用户专有的数据
+    countdown_events = db.relationship('CountdownEvent', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    settings = db.relationship('Setting', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    mottos = db.relationship('Motto', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    todos = db.relationship('Todo', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+
 
     def set_password(self, password):
         """设置密码，将明文密码哈希后存储"""
@@ -77,14 +80,10 @@ class WeeklyData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     year = db.Column(db.Integer, nullable=False)
     week_num = db.Column(db.Integer, nullable=False)
-    efficiency = db.Column(db.String(100), nullable=True)
+    # --- 核心改造：将 efficiency 字段类型从 String 改为 Float ---
+    efficiency = db.Column(db.Float, nullable=True)
 
-    # ============================================================================
-    # 3. 将 user_id 替换为 stage_id
-    # ============================================================================
     stage_id = db.Column(db.Integer, db.ForeignKey('stage.id'), nullable=False)
-
-    # --- 修改唯一性约束，现在是针对每个阶段是唯一的 ---
     __table_args__ = (db.UniqueConstraint('year', 'week_num', 'stage_id', name='_stage_year_week_uc'),)
 
     def to_dict(self):
@@ -94,29 +93,24 @@ class WeeklyData(db.Model):
             'year': self.year,
             'week_num': self.week_num,
             'efficiency': self.efficiency,
-            'stage_id': self.stage_id  # 为数据迁移添加 stage_id
+            'stage_id': self.stage_id
         }
 
 
 class DailyData(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    # --- 修正：移除了列级别的 unique=True，因为它过于严格，应由下方的表级约束来保证唯一性 ---
     log_date = db.Column(db.Date, nullable=False)
-    efficiency = db.Column(db.String(100), nullable=True)
+    # --- 核心改造：将 efficiency 字段类型从 String 改为 Float ---
+    efficiency = db.Column(db.Float, nullable=True)
 
-    # ============================================================================
-    # 4. 将 user_id 替换为 stage_id
-    # ============================================================================
     stage_id = db.Column(db.Integer, db.ForeignKey('stage.id'), nullable=False)
-
-    # --- 修改唯一性约束，现在是针对每个阶段是唯一的 ---
     __table_args__ = (db.UniqueConstraint('log_date', 'stage_id', name='_stage_log_date_uc'),)
 
     def to_dict(self):
         """将 DailyData 对象转换为字典。"""
         return {
             'id': self.id,
-            'log_date': self.log_date.isoformat(),  # 转换为 ISO 格式字符串
+            'log_date': self.log_date.isoformat(),
             'efficiency': self.efficiency,
             'stage_id': self.stage_id
         }
@@ -132,9 +126,6 @@ class LogEntry(db.Model):
     mood = db.Column(db.Integer, nullable=True)
     notes = db.Column(db.Text, nullable=True)
 
-    # ============================================================================
-    # 5. 将 user_id 替换为 stage_id
-    # ============================================================================
     stage_id = db.Column(db.Integer, db.ForeignKey('stage.id'), nullable=False)
 
     @property
@@ -151,7 +142,7 @@ class LogEntry(db.Model):
         """将 LogEntry 对象转换为字典。"""
         return {
             'id': self.id,
-            'log_date': self.log_date.isoformat(),  # 转换为 ISO 格式字符串
+            'log_date': self.log_date.isoformat(),
             'time_slot': self.time_slot,
             'task': self.task,
             'actual_duration': self.actual_duration,
@@ -166,7 +157,6 @@ class CountdownEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(200), nullable=False)
     target_datetime_utc = db.Column(db.DateTime(timezone=True), nullable=False)
-    # 倒计时事件是用户级别的，与阶段无关，保持不变
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
     def __repr__(self):
@@ -179,3 +169,28 @@ class CountdownEvent(db.Model):
             'title': self.title,
             'target_datetime_utc': self.target_datetime_utc.isoformat()
         }
+
+
+class Motto(db.Model):
+    """格言模型"""
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Motto {self.content[:20]}>'
+
+
+class Todo(db.Model):
+    """备忘录/待办事项模型"""
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.Text, nullable=False)
+    due_date = db.Column(db.Date, nullable=True)
+    priority = db.Column(db.Integer, default=2)
+    is_completed = db.Column(db.Boolean, default=False, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    def __repr__(self):
+        return f'<Todo {self.content[:20]}>'

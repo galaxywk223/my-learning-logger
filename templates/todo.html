@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block title %}备忘录{% endblock %}
+
+{% block content %}
+<style>
+    .todo-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.75rem 1.25rem;
+        background-color: var(--color-card-bg);
+        border: 1px solid var(--color-card-border);
+        border-radius: var(--border-radius-md);
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .todo-item:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--box-shadow);
+    }
+    .todo-item.completed {
+        background-color: #f8f9fa; /* light grey */
+    }
+    .todo-item.completed .todo-content {
+        text-decoration: line-through;
+        color: var(--color-text-medium);
+    }
+    .todo-content {
+        flex-grow: 1;
+        margin: 0;
+    }
+    .todo-due-date {
+        font-size: 0.85rem;
+        color: var(--color-text-medium);
+    }
+    .priority-badge {
+        font-size: 0.75rem;
+        padding: 0.3em 0.6em;
+        border-radius: 2rem;
+    }
+    .priority-3 { background-color: #FECACA; color: #991B1B; } /* High - Red */
+    .priority-2 { background-color: #FDE68A; color: #78350F; } /* Medium - Yellow */
+    .priority-1 { background-color: #DBEAFE; color: #1E40AF; } /* Low - Blue */
+
+    .todo-actions .btn {
+        padding: 0.2rem 0.5rem;
+    }
+
+    /* Checkbox styling */
+    .form-check-input:checked {
+        background-color: #198754; /* Green */
+        border-color: #198754;
+    }
+</style>
+
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>备忘录</h1>
+        <p class="lead text-secondary mb-0">管理您的待办事项，保持专注。</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body">
+        <form action="{{ url_for('todo.add_todo') }}" method="POST">
+            <div class="row g-2 align-items-center">
+                <div class="col-lg-6">
+                    <input type="text" name="content" class="form-control" placeholder="需要做什么？" required>
+                </div>
+                <div class="col-lg-2">
+                    <input type="date" name="due_date" class="form-control">
+                </div>
+                <div class="col-lg-2">
+                    <select name="priority" class="form-select">
+                        <option value="3">高优先级</option>
+                        <option value="2" selected>中优先级</option>
+                        <option value="1">低优先级</option>
+                    </select>
+                </div>
+                <div class="col-lg-2 d-grid">
+                    <button type="submit" class="btn btn-primary">添加任务</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<h3 class="mt-4 mb-3">待办事项</h3>
+<div id="pending-todos">
+    {% for todo in pending_todos %}
+        {% include '_todo_item.html' %}
+    {% else %}
+    <p class="text-center text-muted p-4">太棒了，所有任务都已完成！</p>
+    {% endfor %}
+</div>
+
+<h3 class="mt-5 mb-3">
+    <a class="text-decoration-none" data-bs-toggle="collapse" href="#completed-todos-collapse" role="button">
+        已完成 <i data-lucide="chevron-down" style="width: 16px; height: 16px;"></i>
+    </a>
+</h3>
+<div class="collapse" id="completed-todos-collapse">
+    <div id="completed-todos">
+        {% for todo in completed_todos %}
+            {% include '_todo_item.html' %}
+        {% else %}
+        <p class="text-center text-muted p-4">还没有已完成的任务。</p>
+        {% endfor %}
+    </div>
+</div>
+
+{% for todo in pending_todos %}{% include '_todo_edit_modal.html' %}{% endfor %}
+{% for todo in completed_todos %}{% include '_todo_edit_modal.html' %}{% endfor %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function handleToggle(checkbox) {
+        const todoId = checkbox.dataset.todoId;
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/todo/toggle/${todoId}`;
+        
+        // Add a header to signify an AJAX request
+        fetch(form.action, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Reload for simplicity, or implement DOM manipulation for smoother experience
+                location.reload(); 
+            } else {
+                alert('操作失败，请刷新页面重试。');
+            }
+        });
+    }
+
+    // Attach event listeners to all checkboxes
+    document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            handleToggle(this);
+        });
+    });
+
+    lucide.createIcons();
+});
+</script>
+{% endblock %}

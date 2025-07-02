@@ -127,7 +127,6 @@
     }
 </style>
 
-<!-- 页面头部：标题、排序和添加按钮 -->
 <div class="page-header-records d-flex justify-content-between align-items-center">
     <div>
         <h1>学习记录</h1>
@@ -149,7 +148,6 @@
 </div>
 
 
-<!-- 如果需要初始设置，显示提示信息 -->
 {% if setup_needed %}
 <div class="alert alert-warning text-center">
     <h4 class="alert-heading">请先完成初始设置</h4>
@@ -166,21 +164,7 @@
             <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
                 <span class="flex-grow-1 me-3">{{ week.year }} 年 - 第 {{ week.week_num }} 周</span>
-                <span class="d-flex align-items-center" onclick="event.stopPropagation();">
-                        {% if week.efficiency %}
-                            <span class="badge bg-secondary">周效率: {{ week.efficiency }}</span>
-                        {% else %}
-                            <span class="badge bg-light text-dark border">未设置周效率</span>
-                        {% endif %}
-                        {% if week.week_id %}
-                        <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
-                           data-url="{{ url_for('records.get_edit_week_form', week_id=week.week_id) }}"
-                           title="设置/编辑周效率"
-                           onclick="event.stopPropagation();">
-                            <i data-lucide="edit-3"></i>
-                        </a>
-                        {% endif %}
-                    </span>
+                <span class="badge bg-secondary">周平均效率: {{ week.efficiency|round(1, 'floor') }}</span>
             </button>
         </h2>
         <div id="collapse-{{ week.year }}-{{ week.week_num }}"
@@ -190,22 +174,7 @@
                 <div class="card day-card day-card-{{ loop.index0 % 2 }}">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <span>{{ day.date.strftime('%Y-%m-%d') }} (周{{ ['一','二','三','四','五','六','日'][day.date.weekday()] }})</span>
-
-                        <span class="d-flex align-items-center" onclick="event.stopPropagation();">
-                            {% if day.efficiency %}
-                                <span class="badge bg-info text-dark">日效率: {{ day.efficiency }}</span>
-                            {% else %}
-                                <span class="badge bg-light text-dark border">未设置日效率</span>
-                            {% endif %}
-                            {% if day.day_id %}
-                            <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
-                               data-url="{{ url_for('records.get_edit_day_form', day_id=day.day_id) }}"
-                               title="设置/编辑日效率"
-                               onclick="event.stopPropagation();">
-                                <i data-lucide="edit-3"></i>
-                            </a>
-                            {% endif %}
-                        </span>
+                        <span class="badge bg-info text-dark">日效率积分: {{ day.efficiency|round(1, 'floor') }}</span>
                     </div>
                     <div class="card-body p-0">
                         <table class="table table-hover log-table">
@@ -263,16 +232,13 @@
 </div>
 {% endif %}
 
-<!-- 全局模态框，用于加载各种表单 -->
 <div class="modal fade" id="formModal" tabindex="-1" aria-labelledby="formModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
         <div class="modal-content">
-            <!-- 表单内容将通过 JavaScript 动态加载到这里 -->
-        </div>
+            </div>
     </div>
 </div>
 
-<!-- 删除确认的隐藏表单 -->
 <form id="deleteForm" method="POST" style="display: none;">
     <input type="hidden" name="csrf_token" value="{{ csrf_token() if csrf_token else '' }}">
 </form>

@@ -22,6 +22,10 @@
     .card-records { border-top-color: var(--color-primary); }
     .card-charts { border-top-color: var(--color-accent); }
     .card-countdown { border-top-color: #4338CA; } /* 深靛蓝色 */
+    /* --- 新增：新卡片颜色 --- */
+    .card-todo { border-top-color: #22C55E; } /* 绿色 */
+    .card-motto { border-top-color: #6366F1; } /* 靛蓝色 */
+
 
     .dashboard-card:hover {
         transform: translateY(-8px);
@@ -45,7 +49,7 @@
         background-color: var(--color-primary-light); /* 默认背景色 */
     }
 
-    .icon-container i {
+    .icon-container i, .icon-container svg { /* MODIFIED: Select both i and svg */
         width: 32px;
         height: 32px;
         color: var(--color-primary-dark); /* 默认图标颜色 */
@@ -53,13 +57,19 @@
 
     /* 为不同卡片设置不同的图标容器颜色 */
     .icon-container-records { background-color: var(--color-primary-light); }
-    .icon-container-records i { color: var(--color-primary-dark); }
+    .icon-container-records i, .icon-container-records svg { color: var(--color-primary-dark); }
 
     .icon-container-charts { background-color: var(--color-accent-light); }
-    .icon-container-charts i { color: var(--color-accent-dark); }
+    .icon-container-charts i, .icon-container-charts svg { color: var(--color-accent-dark); }
 
     .icon-container-countdown { background-color: #C7D2FE; } /* 浅靛蓝色 */
-    .icon-container-countdown i { color: #4338CA; } /* 深靛蓝色 */
+    .icon-container-countdown i, .icon-container-countdown svg { color: #4338CA; } /* 深靛蓝色 */
+
+    /* --- 新增：新卡片图标颜色 --- */
+    .icon-container-todo { background-color: #DCFCE7; }
+    .icon-container-todo i, .icon-container-todo svg { color: #16A34A; }
+    .icon-container-motto { background-color: #E0E7FF; }
+    .icon-container-motto i, .icon-container-motto svg { color: #4338CA; }
 
 
     .card-title-custom {
@@ -74,6 +84,40 @@
         font-size: 1rem;
         line-height: 1.5;
     }
+
+    /* --- 格言卡片样式 --- */
+    .motto-card {
+        background-color: rgba(255, 255, 255, 0.85);
+        backdrop-filter: blur(5px);
+        border: none;
+    }
+
+    #random-motto-content {
+        font-size: 1.2rem;
+        font-weight: 500;
+        font-style: italic;
+        color: #374151; /* gray-700 */
+        min-height: 28px; /* 防止刷新时文字跳动 */
+    }
+
+    #refresh-motto-btn {
+        padding: 0.25rem 0.5rem;
+        font-size: 0.8rem;
+    }
+
+    #refresh-motto-btn .refresh-icon { /* MODIFIED: Select icon by class */
+        width: 14px;
+        height: 14px;
+    }
+
+    /* 刷新按钮旋转动画 */
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    .animate-spin {
+        animation: spin 1s linear infinite;
+    }
 </style>
 
 <div class="page-header text-center">
@@ -81,8 +125,21 @@
     <p class="lead text-secondary">今天你做别人不愿意做的事，明天你就能做到别人做不到的事！</p>
 </div>
 
+<div class="row justify-content-center mb-4">
+    <div class="col-lg-8">
+        <div class="card motto-card">
+            <div class="card-body text-center position-relative py-3">
+                <p id="random-motto-content" class="mb-0">正在加载今日份的鸡汤...</p>
+                <button id="refresh-motto-btn" class="btn btn-sm btn-light border position-absolute top-50 end-0 translate-middle-y me-3">
+                    <i data-lucide="refresh-cw" class="refresh-icon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+
 <div class="row g-4 justify-content-center">
-    <!-- 卡片 1: 学习记录表 -->
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('records.list_records') }}" class="dashboard-card card-records">
             <div class="card-body">
@@ -95,7 +152,6 @@
         </a>
     </div>
 
-    <!-- 卡片 2: 效率趋势图 -->
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('charts.chart_page') }}" class="dashboard-card card-charts">
             <div class="card-body">
@@ -108,7 +164,6 @@
         </a>
     </div>
 
-    <!-- 卡片 3: 目标倒计时 -->
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('countdown.list_events') }}" class="dashboard-card card-countdown">
             <div class="card-body">
@@ -120,13 +175,70 @@
             </div>
         </a>
     </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('todo.list_todos') }}" class="dashboard-card card-todo">
+            <div class="card-body">
+                <div class="icon-container icon-container-todo">
+                    <i data-lucide="check-square"></i>
+                </div>
+                <h5 class="card-title-custom">备忘录</h5>
+                <p class="card-text-custom">管理您的待办事项，保持专注。</p>
+            </div>
+        </a>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+        <a href="{{ url_for('motto.management') }}" class="dashboard-card card-motto">
+            <div class="card-body">
+                <div class="icon-container icon-container-motto">
+                    <i data-lucide="quote"></i>
+                </div>
+                <h5 class="card-title-custom">格言管理</h5>
+                <p class="card-text-custom">添加、编辑和管理您的专属格言。</p>
+            </div>
+        </a>
+    </div>
 </div>
 
 {% endblock %}
 
 {% block scripts %}
 <script>
-    // 确保在重新加载页面时也能正确创建图标
-    lucide.createIcons();
+    document.addEventListener('DOMContentLoaded', function() {
+        // --- 格言加载逻辑 ---
+        const mottoElement = document.getElementById('random-motto-content');
+        const refreshBtn = document.getElementById('refresh-motto-btn');
+
+        const refreshIcon = refreshBtn.querySelector('.refresh-icon');
+
+        async function fetchAndDisplayMotto() {
+            if (!mottoElement || !refreshBtn || !refreshIcon) return;
+
+            refreshIcon.classList.add('animate-spin');
+            refreshBtn.disabled = true;
+
+            try {
+                const response = await fetch("{{ url_for('motto.get_random_motto') }}");
+                if (!response.ok) throw new Error('Network response was not ok');
+                const data = await response.json();
+                mottoElement.textContent = `“ ${data.content} ”`;
+            } catch (error) {
+                console.error('Failed to fetch motto:', error);
+                mottoElement.textContent = '无法加载格言，请稍后再试。';
+            } finally {
+                refreshIcon.classList.remove('animate-spin');
+                refreshBtn.disabled = false;
+                lucide.createIcons({
+                    nodes: [refreshBtn]
+                });
+            }
+        }
+
+        refreshBtn.addEventListener('click', fetchAndDisplayMotto);
+
+        // 初始加载
+        fetchAndDisplayMotto();
+    });
 </script>
 {% endblock %}
