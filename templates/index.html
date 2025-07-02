@@ -222,10 +222,32 @@
             const button = event.relatedTarget;
             const url = button.getAttribute('data-url');
             const modalContent = formModal.querySelector('.modal-content');
+
             fetch(url)
                 .then(response => response.text())
                 .then(html => {
-                    modalContent.innerHTML = html;
+                    // *** BUG FIX: Manually find and execute the script ***
+                    const parser = new DOMParser();
+                    const doc = parser.parseFromString(html, "text/html");
+
+                    // Set the HTML content first
+                    modalContent.innerHTML = doc.body.innerHTML;
+
+                    // Find all script tags in the loaded content and execute them
+                    const scripts = doc.head.getElementsByTagName('script');
+                    for (let i = 0; i < scripts.length; i++) {
+                        const script = document.createElement('script');
+                        script.text = scripts[i].innerText;
+                        // It's safer to append to head to ensure execution context
+                        document.head.appendChild(script).parentNode.removeChild(script);
+                    }
+                    const bodyScripts = doc.body.getElementsByTagName('script');
+                     for (let i = 0; i < bodyScripts.length; i++) {
+                        const script = document.createElement('script');
+                        script.text = bodyScripts[i].innerText;
+                        document.head.appendChild(script).parentNode.removeChild(script);
+                    }
+
                     lucide.createIcons();
                 })
                 .catch(err => console.error('Failed to load modal content:', err));
@@ -242,7 +264,6 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    // --- MODIFIED: Reload the page on success ---
                     location.reload();
                 } else {
                     const errorDiv = form.querySelector('.error-message');

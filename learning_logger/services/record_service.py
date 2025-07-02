@@ -3,7 +3,8 @@ from datetime import date, timedelta
 from itertools import groupby
 from flask import current_app
 from .. import db
-from ..models import Stage, LogEntry, WeeklyData, DailyData
+# BUG FIX: Added 'Category' to the import list
+from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCategory
 from ..helpers import get_custom_week_info
 
 
@@ -112,11 +113,20 @@ def add_log_for_stage(stage_id, user, form_data):
     stage = Stage.query.filter_by(id=stage_id, user_id=user.id).first()
     if not stage: return False, "指定的阶段不存在或无权访问。"
     try:
+        subcategory_id = form_data.get('subcategory_id', type=int)
+        if subcategory_id:
+            # 验证小分类是否属于该用户
+            subcategory = SubCategory.query.join(Category).filter(
+                SubCategory.id == subcategory_id, Category.user_id == user.id).first()
+            if not subcategory:
+                return False, "选择了无效的分类。"
+
         new_log = LogEntry(stage_id=stage.id, log_date=date.fromisoformat(form_data['log_date']),
                            task=form_data.get('task'), time_slot=form_data.get('time_slot'),
-                           category=form_data.get('category'), notes=form_data.get('notes'),
+                           notes=form_data.get('notes'),
                            actual_duration=form_data.get('actual_duration', type=int),
-                           mood=form_data.get('mood', type=int))
+                           mood=form_data.get('mood', type=int),
+                           subcategory_id=subcategory_id)
         db.session.add(new_log)
         db.session.commit()
         recalculate_efficiency_for_stage(stage)
@@ -132,13 +142,23 @@ def update_log_for_user(log_id, user, form_data):
     if not log: return False, '未找到要编辑的记录或无权访问。'
     try:
         stage = log.stage
+
+        subcategory_id = form_data.get('subcategory_id', type=int)
+        if subcategory_id:
+            # 验证小分类是否属于该用户
+            subcategory = SubCategory.query.join(Category).filter(
+                SubCategory.id == subcategory_id, Category.user_id == user.id).first()
+            if not subcategory:
+                return False, "选择了无效的分类。"
+
         log.log_date = date.fromisoformat(form_data.get('log_date'))
         log.task = form_data.get('task')
         log.time_slot = form_data.get('time_slot')
-        log.category = form_data.get('category')
         log.notes = form_data.get('notes')
         log.actual_duration = form_data.get('actual_duration', type=int)
         log.mood = form_data.get('mood', type=int)
+        log.subcategory_id = subcategory_id
+
         db.session.commit()
         recalculate_efficiency_for_stage(stage)
         return True, '记录更新成功！'

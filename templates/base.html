@@ -105,7 +105,12 @@
             <a href="{{ url_for('charts.chart_page') }}"
                class="nav-link {% if request.endpoint == 'charts.chart_page' %}active{% endif %}">
                 <i data-lucide="bar-chart-3"></i>
-                <span>统计图表</span>
+                <span>效率图表</span>
+            </a>
+            <a href="{{ url_for('category_charts.chart_page') }}"
+               class="nav-link {% if request.endpoint == 'category_charts.chart_page' %}active{% endif %}">
+                <i data-lucide="pie-chart"></i>
+                <span>分类统计</span>
             </a>
             <a href="{{ url_for('countdown.list_events') }}"
                class="nav-link {% if request.endpoint and 'countdown' in request.endpoint %}active{% endif %}">
@@ -116,6 +121,11 @@
                class="nav-link {% if request.endpoint and 'todo' in request.endpoint %}active{% endif %}">
                 <i data-lucide="check-square"></i>
                 <span>备忘录</span>
+            </a>
+            <a href="{{ url_for('category.management') }}"
+               class="nav-link {% if request.endpoint and 'category' in request.endpoint %}active{% endif %}">
+                <i data-lucide="folder-kanban"></i>
+                <span>分类管理</span>
             </a>
             <a href="{{ url_for('motto.management') }}"
                class="nav-link {% if request.endpoint and 'motto' in request.endpoint %}active{% endif %}">

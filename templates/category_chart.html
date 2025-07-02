@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+
+{% block title %}分类统计{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-content-between align-items-center">
+    <div>
+        <h1>分类统计</h1>
+        <p class="lead text-secondary mb-0">洞察您在各大类及小类任务上的时间投入分布。</p>
+    </div>
+    <div class="col-md-3">
+        <label for="stageFilter" class="form-label text-light">选择学习阶段</label>
+        <select id="stageFilter" class="form-select">
+            <option value="all" selected>全部历史</option>
+            {% for stage in stages %}
+            <option value="{{ stage.id }}">{{ stage.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0" id="chartTitle">大分类时长占比</h5>
+                <button id="backButton" class="btn btn-sm btn-outline-secondary" style="display: none;">
+                    <i data-lucide="arrow-left" class="me-1" style="width:16px; height:16px;"></i>返回上一级
+                </button>
+            </div>
+            <div class="card-body" style="height: 60vh;">
+                 <div id="chart-container" style="position: relative; height: 100%; width: 100%;">
+                    <canvas id="categoryPieChart"></canvas>
+                </div>
+                 <div id="no-data-message" class="text-center p-5" style="display: none;">
+                    <h3>暂无数据</h3>
+                    <p class="text-muted">当前筛选范围内没有找到任何带分类的学习记录。</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const ctx = document.getElementById('categoryPieChart').getContext('2d');
+    const stageFilter = document.getElementById('stageFilter');
+    const chartTitle = document.getElementById('chartTitle');
+    const backButton = document.getElementById('backButton');
+    const chartContainer = document.getElementById('chart-container');
+    const noDataMessage = document.getElementById('no-data-message');
+
+    let categoryChart;
+    let rawData; // Store the raw data from API
+    let currentView = 'main'; // 'main' or 'drilldown'
+    let currentCategory = ''; // The category being drilled down into
+
+    // Pre-defined color palette
+    const chartColors = [
+        '#60A5FA', '#F87171', '#FBBF24', '#4ADE80', '#A78BFA',
+        '#2DD4BF', '#F472B6', '#818CF8', '#FB923C', '#34D399'
+    ];
+
+    const chartOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+            legend: {
+                position: 'right',
+            },
+            tooltip: {
+                callbacks: {
+                    label: function(context) {
+                        let label = context.label || '';
+                        if (label) {
+                            label += ': ';
+                        }
+                        const value = context.parsed;
+                        const total = context.chart.getDatasetMeta(0).total;
+                        const percentage = ((value / total) * 100).toFixed(1);
+                        return `${label}${value.toFixed(2)} 小时 (${percentage}%)`;
+                    }
+                }
+            }
+        },
+        onClick: (event, elements) => {
+            if (currentView === 'main' && elements.length > 0) {
+                const chartElement = elements[0];
+                const label = categoryChart.data.labels[chartElement.index];
+                if (rawData.drilldown[label] && rawData.drilldown[label].labels.length > 0) {
+                    currentCategory = label;
+                    currentView = 'drilldown';
+                    updateChart();
+                }
+            }
+        }
+    };
+
+    categoryChart = new Chart(ctx, {
+        type: 'pie',
+        options: chartOptions
+    });
+
+    async function fetchDataAndRender() {
+        const stageId = stageFilter.value;
+        const response = await fetch(`/category_charts/api/data?stage_id=${stageId}`);
+        rawData = await response.json();
+        
+        // Reset to main view whenever filter changes
+        currentView = 'main';
+        currentCategory = '';
+        
+        updateChart();
+    }
+
+    function updateChart() {
+        let chartData;
+        let title;
+
+        if (currentView === 'drilldown') {
+            chartData = rawData.drilldown[currentCategory];
+            title = `${currentCategory} - 小分类占比`;
+            backButton.style.display = 'inline-block';
+        } else {
+            chartData = rawData.main;
+            title = '大分类时长占比';
+            backButton.style.display = 'none';
+        }
+
+        if (chartData && chartData.labels.length > 0) {
+            chartContainer.style.display = 'block';
+            noDataMessage.style.display = 'none';
+            categoryChart.data = {
+                labels: chartData.labels,
+                datasets: [{
+                    data: chartData.data,
+                    backgroundColor: chartColors,
+                    hoverOffset: 4
+                }]
+            };
+            categoryChart.update();
+        } else {
+            // No data to display
+            chartContainer.style.display = 'none';
+            noDataMessage.style.display = 'block';
+        }
+        
+        chartTitle.textContent = title;
+    }
+
+    function goBack() {
+        currentView = 'main';
+        currentCategory = '';
+        updateChart();
+    }
+
+    stageFilter.addEventListener('change', fetchDataAndRender);
+    backButton.addEventListener('click', goBack);
+
+    // Initial load
+    fetchDataAndRender();
+});
+</script>
+{% endblock %}

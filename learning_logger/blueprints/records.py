@@ -6,9 +6,19 @@ from flask import (Blueprint, render_template, request, redirect, url_for,
 from flask_login import login_required, current_user
 
 from ..services import record_service, data_service
-from ..models import Stage
+from ..models import Stage, Category, SubCategory
 
 records_bp = Blueprint('records', __name__)
+
+
+def _get_category_data_for_form():
+    """Helper to fetch and structure category data for the form."""
+    all_categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
+    all_subcategories = {}
+    for cat in all_categories:
+        all_subcategories[cat.id] = [{'id': sub.id, 'name': sub.name} for sub in
+                                     cat.subcategories.order_by(SubCategory.name).all()]
+    return all_categories, all_subcategories
 
 
 # --- Main view and form-getting routes are fine, no changes needed ---
@@ -23,7 +33,8 @@ def list_records():
         if active_stage:
             session['active_stage_id'] = active_stage.id
         else:
-            flash('指定的阶段不存在。', 'error'); return redirect(url_for('records.list_records'))
+            flash('指定的阶段不存在。', 'error');
+            return redirect(url_for('records.list_records'))
     else:
         active_stage_id = session.get('active_stage_id')
         if active_stage_id: active_stage = next((s for s in all_stages if s.id == active_stage_id), None)
@@ -46,8 +57,12 @@ def get_add_form():
     if not active_stage_id:
         # This case is unlikely with AJAX, but good for safety
         return jsonify({'success': False, 'message': '请先选择一个有效的学习阶段。'})
+
+    all_categories, all_subcategories = _get_category_data_for_form()
+
     return render_template('_form_record.html', log=None, default_date=date.today(), action_url=url_for('records.add'),
-                           submit_button_text='添加记录')
+                           submit_button_text='添加记录', all_categories=all_categories,
+                           all_subcategories=all_subcategories)
 
 
 @records_bp.route('/form/edit/<int:log_id>')
@@ -56,8 +71,12 @@ def get_edit_form(log_id):
     log = record_service.get_log_entry_for_user(log_id, current_user)
     if not log:
         return jsonify({'success': False, 'message': '记录不存在或无权访问。'})
+
+    all_categories, all_subcategories = _get_category_data_for_form()
+
     return render_template('_form_record.html', log=log, default_date=log.log_date,
-                           action_url=url_for('records.edit', log_id=log.id), submit_button_text='更新记录')
+                           action_url=url_for('records.edit', log_id=log.id), submit_button_text='更新记录',
+                           all_categories=all_categories, all_subcategories=all_subcategories)
 
 
 # ============================================================================

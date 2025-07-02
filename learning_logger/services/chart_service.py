@@ -4,7 +4,7 @@ import collections
 from datetime import date, timedelta
 from sqlalchemy import func
 from .. import db
-from ..models import Stage, LogEntry, WeeklyData, DailyData
+from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCategory
 from ..helpers import get_custom_week_info
 
 # --- NEW: Import the record service to use its calculation engine ---
@@ -143,3 +143,47 @@ def get_chart_data_for_user(user):
         'daily_efficiency_data': {'labels': daily_labels, 'actuals': daily_efficiencies,
                                   'trends': _calculate_sma(daily_efficiencies, 7)}
     }, False
+
+
+def get_category_chart_data(user, stage_id=None):
+    """为分类饼图准备数据，支持按阶段筛选。"""
+    query = db.session.query(
+        Category.name,
+        SubCategory.name,
+        func.sum(LogEntry.actual_duration)
+    ).join(SubCategory, LogEntry.subcategory_id == SubCategory.id) \
+        .join(Category, SubCategory.category_id == Category.id) \
+        .filter(Category.user_id == user.id) \
+        .group_by(Category.name, SubCategory.name)
+
+    if stage_id:
+        query = query.filter(LogEntry.stage_id == stage_id)
+
+    results = query.all()
+
+    if not results:
+        return None
+
+    # Process data for drilldown
+    category_data = collections.defaultdict(lambda: {'total': 0, 'subs': []})
+    for cat_name, sub_name, duration in results:
+        duration_hours = (duration or 0) / 60.0
+        category_data[cat_name]['total'] += duration_hours
+        category_data[cat_name]['subs'].append({'name': sub_name, 'duration': round(duration_hours, 2)})
+
+    # Main category view
+    main_labels = list(category_data.keys())
+    main_data = [round(category_data[key]['total'], 2) for key in main_labels]
+
+    # Subcategory (drilldown) view
+    sub_data = {
+        cat_name: {
+            'labels': [sub['name'] for sub in sorted(cat_data['subs'], key=lambda x: x['duration'], reverse=True)],
+            'data': [sub['duration'] for sub in sorted(cat_data['subs'], key=lambda x: x['duration'], reverse=True)]
+        } for cat_name, cat_data in category_data.items()
+    }
+
+    return {
+        'main': {'labels': main_labels, 'data': main_data},
+        'drilldown': sub_data
+    }
