@@ -1,4 +1,4 @@
-# learning_logger/blueprints/main.py
+# learning_logger/blueprints/main.py (Fortified Version)
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, session)
@@ -6,15 +6,18 @@ from flask_login import login_required, current_user
 from datetime import date
 
 from .. import db
-from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData
+# --- MODIFIED: Import all user-related models for a full cleanup ---
+from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData, Motto, Todo
 
 main_bp = Blueprint('main', __name__)
+
 
 @main_bp.route('/')
 @login_required
 def index():
     """新的主页，作为功能导航仪表盘。"""
     return render_template('dashboard.html')
+
 
 @main_bp.route('/settings', methods=['GET', 'POST'])
 @login_required
@@ -25,14 +28,13 @@ def settings():
     settings_dict = {setting.key: setting.value for setting in all_settings}
     return render_template('settings.html', settings=settings_dict, user_stages=user_stages)
 
-# ============================================================================
-# 阶段管理的路由
-# ============================================================================
 
+# ============================================================================
+# 阶段管理的路由 (Unchanged)
+# ============================================================================
 @main_bp.route('/stages/add', methods=['POST'])
 @login_required
 def add_stage():
-    """处理添加新阶段的请求。"""
     name = request.form.get('name')
     start_date_str = request.form.get('start_date')
     if not name or not start_date_str:
@@ -50,10 +52,10 @@ def add_stage():
         flash('创建阶段时发生错误。', 'error')
     return redirect(url_for('main.settings'))
 
+
 @main_bp.route('/stages/edit/<int:stage_id>', methods=['POST'])
 @login_required
 def edit_stage(stage_id):
-    """处理编辑阶段名称的请求。"""
     stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
     new_name = request.form.get('name')
     if not new_name:
@@ -69,10 +71,10 @@ def edit_stage(stage_id):
         flash('更新阶段名称时发生错误。', 'error')
     return redirect(url_for('main.settings'))
 
+
 @main_bp.route('/stages/delete/<int:stage_id>', methods=['POST'])
 @login_required
 def delete_stage(stage_id):
-    """处理删除阶段的请求。"""
     stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
     try:
         db.session.delete(stage)
@@ -84,31 +86,52 @@ def delete_stage(stage_id):
         flash('删除阶段时发生错误。', 'error')
     return redirect(url_for('main.settings'))
 
+
 @main_bp.route('/stages/apply/<int:stage_id>', methods=['POST'])
 @login_required
 def apply_stage(stage_id):
-    """处理应用（切换）阶段的请求。"""
     stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
     session['active_stage_id'] = stage.id
     flash(f'已切换到阶段：“{stage.name}”', 'success')
     return redirect(url_for('records.list_records'))
 
-# ============================================================================
-# 数据清理路由
-# ============================================================================
 
+# ============================================================================
+# 数据清理路由 (Fortified Version)
+# ============================================================================
 @main_bp.route('/clear_my_data', methods=['POST'])
 @login_required
 def clear_my_data():
-    """清空当前用户的所有数据。"""
+    """【强力版】清空当前用户的所有数据，确保无残留。"""
     try:
-        Stage.query.filter_by(user_id=current_user.id).delete()
-        CountdownEvent.query.filter_by(user_id=current_user.id).delete()
-        Setting.query.filter_by(user_id=current_user.id).delete()
+        # Step 1: Get all stage IDs for the user to safely delete related data
+        user_stages = Stage.query.filter_by(user_id=current_user.id).all()
+        stage_ids = [s.id for s in user_stages]
+
+        # Step 2: Explicitly delete all related data first, starting from the "children"
+        if stage_ids:
+            LogEntry.query.filter(LogEntry.stage_id.in_(stage_ids)).delete(synchronize_session=False)
+            DailyData.query.filter(DailyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
+            WeeklyData.query.filter(WeeklyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
+
+        # Step 3: Delete all user-level data
+        Motto.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
+        Todo.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
+        CountdownEvent.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
+        Setting.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
+
+        # Step 4: Delete the parent 'Stage' objects themselves
+        if user_stages:
+            for stage in user_stages:
+                db.session.delete(stage)
+
+        # Step 5: Commit the transaction
         db.session.commit()
         flash('您的所有个人数据已被成功清空！', 'success')
+
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f'为用户 {current_user.id} 清空数据时出错: {e}')
+        current_app.logger.error(f'为用户 {current_user.id} 清空数据时出错: {e}', exc_info=True)
         flash(f'清空数据时发生严重错误: {e}', 'error')
+
     return redirect(url_for('main.settings'))
