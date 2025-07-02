@@ -39,18 +39,54 @@
         color: var(--color-text-medium);
     }
 
-    .kpi-card-duration { border-left-color: #F97316; }
-    .kpi-card-duration .icon-wrapper { background-color: #FFEDD5; }
-    .kpi-card-duration .icon-wrapper i { color: #EA580C; }
-    .kpi-card-days { border-left-color: #EF4444; }
-    .kpi-card-days .icon-wrapper { background-color: #FEE2E2; }
-    .kpi-card-days .icon-wrapper i { color: #DC2626; }
-    .kpi-card-avg { border-left-color: var(--color-primary); }
-    .kpi-card-avg .icon-wrapper { background-color: var(--color-primary-light); }
-    .kpi-card-avg .icon-wrapper i { color: var(--color-primary-dark); }
+    .kpi-card-duration {
+        border-left-color: #F97316;
+    }
 
-    .chart-container-wrapper { height: 400px; position: relative; }
-    .chart-view-buttons { position: -webkit-sticky; position: sticky; top: 1rem; z-index: 1020; align-self: flex-start; }
+    .kpi-card-duration .icon-wrapper {
+        background-color: #FFEDD5;
+    }
+
+    .kpi-card-duration .icon-wrapper i {
+        color: #EA580C;
+    }
+
+    .kpi-card-days {
+        border-left-color: #EF4444;
+    }
+
+    .kpi-card-days .icon-wrapper {
+        background-color: #FEE2E2;
+    }
+
+    .kpi-card-days .icon-wrapper i {
+        color: #DC2626;
+    }
+
+    .kpi-card-avg {
+        border-left-color: var(--color-primary);
+    }
+
+    .kpi-card-avg .icon-wrapper {
+        background-color: var(--color-primary-light);
+    }
+
+    .kpi-card-avg .icon-wrapper i {
+        color: var(--color-primary-dark);
+    }
+
+    .chart-container-wrapper {
+        height: 450px; /* Increased height for annotations */
+        position: relative;
+    }
+
+    .chart-view-buttons {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 1rem;
+        z-index: 1020;
+        align-self: flex-start;
+    }
 </style>
 
 <div class="page-header d-flex justify-content-between align-items-center">
@@ -66,13 +102,6 @@
     </div>
 </div>
 
-{% if setup_needed %}
-<div class="alert alert-warning text-center">
-    <h4 class="alert-heading">请先完成初始设置</h4>
-    <p>为了查看图表，您需要先在设置页面中指定每周的起始日期并添加一些学习记录。</p>
-    <a href="{{ url_for('main.settings') }}" class="btn btn-warning">前往设置</a>
-</div>
-{% else %}
 <div class="row g-4 mb-4">
     <div class="col-lg-4 col-md-6">
         <div class="kpi-card kpi-card-duration">
@@ -125,7 +154,6 @@
         </div>
     </div>
 </div>
-{% endif %}
 {% endblock %}
 
 {% block scripts %}
@@ -133,107 +161,199 @@
 <script>
     lucide.createIcons();
 
-    // 只在需要渲染图表的页面执行JS代码
-    {% if not setup_needed %}
-
-    // 全局变量，用于存储从API获取的数据和图表实例
     let dataStore = {};
     let durationChart, efficiencyChart;
 
-    // 当DOM加载完毕后，执行主函数
-    document.addEventListener('DOMContentLoaded', () => {
+    // --- NEW: Chart.js plugin for stage annotations ---
+    const stageAnnotationsPlugin = {
+        id: 'stageAnnotations',
+        afterDraw: (chart) => {
+            if (chart.config.options.plugins.stageAnnotations.view !== 'weekly') {
+                return;
+            }
+            const {ctx, chartArea: {bottom, left, right}, scales: {x}} = chart;
+            const annotations = chart.config.options.plugins.stageAnnotations.annotations;
+            if (!annotations) return;
 
+            ctx.save();
+            ctx.font = 'bold 12px "Inter", sans-serif';
+            ctx.textAlign = 'center';
+
+            annotations.forEach(anno => {
+                const startIndex = chart.data.labels.indexOf(anno.start_week_label);
+                const endIndex = chart.data.labels.indexOf(anno.end_week_label);
+
+                if (startIndex === -1 || endIndex === -1) return;
+
+                const startPixel = x.getPixelForValue(startIndex);
+                const endPixel = x.getPixelForValue(endIndex);
+                const middlePixel = startPixel + (endPixel - startPixel) / 2;
+
+                if (middlePixel < left || middlePixel > right) return;
+
+                // Draw line and text
+                ctx.strokeStyle = '#9CA3AF'; // gray-400
+                ctx.lineWidth = 1;
+                ctx.fillStyle = '#4B5563'; // gray-600
+
+                ctx.beginPath();
+                ctx.moveTo(startPixel, bottom + 15);
+                ctx.lineTo(endPixel, bottom + 15);
+                ctx.stroke();
+
+                ctx.beginPath();
+                ctx.moveTo(middlePixel, bottom + 15);
+                ctx.lineTo(middlePixel, bottom + 20);
+                ctx.stroke();
+
+                ctx.fillText(anno.name, middlePixel, bottom + 35);
+            });
+            ctx.restore();
+        }
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
         const durationCtx = document.getElementById('durationChart').getContext('2d');
         const efficiencyCtx = document.getElementById('efficiencyChart').getContext('2d');
         const weeklyBtn = document.getElementById('viewWeekly');
         const dailyBtn = document.getElementById('viewDaily');
 
-        const commonOptions = {
+// 这是修改后的代码
+        const createChartOptions = (yAxisTitle, yMin, yMax, yStep) => ({
             responsive: true, maintainAspectRatio: false,
             interaction: {mode: 'index', intersect: false},
+            layout: {padding: {bottom: 40}}, // Extra padding for annotations
             plugins: {
-                legend: {position: 'bottom', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
-                tooltip: { backgroundColor: '#1f2937', titleFont: {size: 14}, bodyFont: {size: 12}, padding: 10, cornerRadius: 6, boxPadding: 3 }
+                legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}}, // <-- 修改这里
+                tooltip: {
+                    backgroundColor: '#1f2937',
+                    titleFont: {size: 14},
+                    bodyFont: {size: 12},
+                    padding: 10,
+                    cornerRadius: 6,
+                    boxPadding: 3
+                },
+                stageAnnotations: {annotations: [], view: 'weekly'} // Custom plugin options
             },
-            scales: {x: {grid: {display: false}}}
-        };
+            scales: {
+                x: {
+                    grid: {display: false},
+                    ticks: {display: false} // <-- 新增这一行来隐藏X轴的周次标签
+                },
+                y: {
+                    title: {display: true, text: yAxisTitle},
+                    min: yMin,
+                    max: yMax,
+                    ticks: {stepSize: yStep},
+                    grace: '5%'
+                }
+            }
+        });
 
-        const durationChartConfig = { type: 'bar', options: { ...commonOptions, scales: { ...commonOptions.scales, y: {title: {display: true, text: '学习时长 (小时)'}, grace: '5%'} } } };
-        const efficiencyChartConfig = { type: 'bar', options: { ...commonOptions, scales: { ...commonOptions.scales, y: {title: {display: true, text: '学习效率'}, min: 0, max: 5, ticks: {stepSize: 1}} } } };
+        durationChart = new Chart(durationCtx, {
+            type: 'bar',
+            options: createChartOptions('学习时长 (小时)'),
+            plugins: [stageAnnotationsPlugin]
+        });
+        efficiencyChart = new Chart(efficiencyCtx, {
+            type: 'bar',
+            options: createChartOptions('学习效率', 0, 5, 1),
+            plugins: [stageAnnotationsPlugin]
+        });
 
-        // 初始化空图表
-        durationChart = new Chart(durationCtx, durationChartConfig);
-        efficiencyChart = new Chart(efficiencyCtx, efficiencyChartConfig);
-
-        // --- 主函数：获取数据并渲染 ---
         async function fetchDataAndRender() {
             try {
-                // 1. 发起API请求 (*** 已修正此处的URL ***)
                 const response = await fetch("/charts/api/data");
-                if (!response.ok) {
-                    throw new Error(`API请求失败: ${response.statusText}`);
-                }
+                if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
                 const data = await response.json();
 
-                // 2. 将获取的数据存到全局变量
+                if (!data.kpis) {
+                    document.querySelector('.page-header').insertAdjacentHTML('afterend', '<div class="alert alert-info">暂无数据可供分析。</div>');
+                    return;
+                }
+
                 dataStore = {
-                    weekly: { duration: data.weekly_duration_data, efficiency: data.weekly_efficiency_data },
-                    daily: { duration: data.daily_duration_data, efficiency: data.daily_efficiency_data }
+                    weekly: {duration: data.weekly_duration_data, efficiency: data.weekly_efficiency_data},
+                    daily: {duration: data.daily_duration_data, efficiency: data.daily_efficiency_data},
+                    annotations: data.stage_annotations
                 };
 
-                // 3. 更新KPI卡片
                 document.getElementById('kpi-total-hours').textContent = data.kpis.total_hours;
                 document.getElementById('kpi-total-days').textContent = data.kpis.total_days;
                 document.getElementById('kpi-avg-minutes').textContent = data.kpis.avg_daily_minutes;
 
-                // 4. 首次渲染图表 (默认周视图)
                 updateCharts('weekly');
-
             } catch (error) {
-                console.error('获取图表数据时出错:', error);
-                // 可以在页面上显示一个更友好的错误信息
+                console.error('Error fetching chart data:', error);
                 document.querySelector('.page-header').insertAdjacentHTML('afterend', '<div class="alert alert-danger">无法加载图表数据，请稍后重试。</div>');
             }
         }
 
         function updateCharts(view) {
-            // 确保 dataStore 已被填充
             if (!dataStore[view]) return;
 
             durationChart.data = {
                 labels: dataStore[view].duration.labels,
-                datasets: [
-                    { type: 'bar', label: '实际时长', data: dataStore[view].duration.actuals, backgroundColor: 'rgba(251, 146, 60, 0.5)', order: 2 },
-                    { type: 'line', label: '趋势', data: dataStore[view].duration.trends, borderColor: '#B45309', tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1 }
-                ]
+                datasets: [{
+                    type: 'bar',
+                    label: '实际时长',
+                    data: dataStore[view].duration.actuals,
+                    backgroundColor: 'rgba(251, 146, 60, 0.5)',
+                    order: 2
+                }, {
+                    type: 'line',
+                    label: '趋势',
+                    data: dataStore[view].duration.trends,
+                    borderColor: '#B45309',
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 2.5,
+                    order: 1
+                }]
             };
             efficiencyChart.data = {
                 labels: dataStore[view].efficiency.labels,
-                datasets: [
-                    { type: 'bar', label: '实际效率', data: dataStore[view].efficiency.actuals, backgroundColor: 'rgba(248, 113, 113, 0.5)', order: 2 },
-                    { type: 'line', label: '趋势', data: dataStore[view].efficiency.trends, borderColor: '#991B1B', tension: 0.4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1, spanGaps: true }
-                ]
+                datasets: [{
+                    type: 'bar',
+                    label: '实际效率',
+                    data: dataStore[view].efficiency.actuals,
+                    backgroundColor: 'rgba(248, 113, 113, 0.5)',
+                    order: 2
+                }, {
+                    type: 'line',
+                    label: '趋势',
+                    data: dataStore[view].efficiency.trends,
+                    borderColor: '#991B1B',
+                    tension: 0.4,
+                    fill: false,
+                    pointRadius: 0,
+                    borderWidth: 2.5,
+                    order: 1,
+                    spanGaps: true
+                }]
             };
+
+            // Update annotations based on view
+            durationChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
+            efficiencyChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
+
             durationChart.update();
             efficiencyChart.update();
         }
 
-        // 添加按钮事件监听
         weeklyBtn.addEventListener('click', () => {
             updateCharts('weekly');
             weeklyBtn.classList.add('active');
             dailyBtn.classList.remove('active');
         });
-
         dailyBtn.addEventListener('click', () => {
             updateCharts('daily');
             dailyBtn.classList.add('active');
             weeklyBtn.classList.remove('active');
         });
 
-        // 页面加载后，调用主函数
         fetchDataAndRender();
     });
-    {% endif %}
 </script>
 {% endblock %}

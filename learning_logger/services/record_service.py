@@ -1,86 +1,64 @@
-# learning_logger/services/record_service.py
+# learning_logger/services/record_service.py (Corrected)
 
-from datetime import date
+from datetime import date, timedelta
 from itertools import groupby
+from flask import current_app
 from .. import db
-from ..models import LogEntry, WeeklyData, DailyData, Setting
+from ..models import Stage, LogEntry, WeeklyData, DailyData
 from ..helpers import get_custom_week_info
 
 
-def get_structured_logs_for_user(user, sort_order='desc'):
-    """
-    为指定用户获取结构化的学习记录。
-    这是从原视图函数中抽离出来的核心业务逻辑。
-
-    :param user: 用户对象 (通常是 current_user)
-    :param sort_order: 排序顺序 ('asc' or 'desc')
-    :return: 一个元组 (structured_logs, setup_needed_flag)
-    """
+def get_structured_logs_for_stage(stage, sort_order='desc'):
+    """为指定的“阶段”获取结构化的学习记录。"""
     is_reverse = (sort_order == 'desc')
+    stage_start_date = stage.start_date
 
-    # 1. 查询用户的周起始日设置
-    start_date_setting = Setting.query.filter_by(user_id=user.id, key='week_start_date').first()
-    if not start_date_setting:
-        # 如果用户未设置，返回一个标志，让视图处理重定向或提示
-        return [], True
+    logs = stage.log_entries.order_by(LogEntry.log_date.asc(), LogEntry.id.asc()).all()
 
-    start_date = date.fromisoformat(start_date_setting.value)
-
-    # 2. 查询该用户的所有相关数据
-    logs = LogEntry.query.filter_by(user_id=user.id).order_by(LogEntry.log_date.asc(), LogEntry.id.asc()).all()
-    weekly_efficiencies = {(w.year, w.week_num): w.efficiency for w in
-                           WeeklyData.query.filter_by(user_id=user.id).all()}
-    daily_efficiencies = {d.log_date: d.efficiency for d in DailyData.query.filter_by(user_id=user.id).all()}
-
-    # 3. 按周和天组织数据（这部分逻辑与之前完全相同）
-    logs_by_week = groupby(logs, key=lambda log: get_custom_week_info(log.log_date, start_date))
+    logs_by_week = groupby(logs, key=lambda log: get_custom_week_info(log.log_date, stage_start_date))
 
     structured_logs = []
+    week_data_map = {(w.year, w.week_num): w for w in stage.weekly_data.all()}
+    day_data_map = {d.log_date: d for d in stage.daily_data.all()}
+
     for (year, week_num), week_logs_iter in logs_by_week:
         days_in_week = []
-        for day_date, day_logs_iter in groupby(list(week_logs_iter), key=lambda log: log.log_date):
+        week_logs_list = list(week_logs_iter)
+
+        for day_date, day_logs_iter in groupby(week_logs_list, key=lambda log: log.log_date):
+            day_data = day_data_map.get(day_date)
             days_in_week.append({
                 'date': day_date,
-                'efficiency': daily_efficiencies.get(day_date),
+                'day_id': day_data.id if day_data else None,
+                'efficiency': day_data.efficiency if day_data else None,
                 'logs': list(day_logs_iter)
             })
 
+        week_data = week_data_map.get((year, week_num))
         structured_logs.append({
             'year': year,
             'week_num': week_num,
-            'efficiency': weekly_efficiencies.get((year, week_num)),
+            'week_id': week_data.id if week_data else None,
+            'efficiency': week_data.efficiency if week_data else None,
             'days': sorted(days_in_week, key=lambda d: d['date'], reverse=is_reverse)
         })
 
-    # 4. 根据排序顺序对周进行排序
-    sorted_weeks = sorted(structured_logs, key=lambda w: (w['year'], w['week_num']), reverse=is_reverse)
-
-    # 5. 为前端添加索引（如果需要）
-    for week_idx, week in enumerate(sorted_weeks):
-        week['week_index'] = week_idx
-        for day_idx, day in enumerate(week['days']):
-            day['day_index'] = day_idx
-
-    # 6. 返回处理好的数据和设置完成的标志
-    return sorted_weeks, False
+    return sorted(structured_logs, key=lambda w: (w['year'], w['week_num']), reverse=is_reverse)
 
 
-# ===============================================================
-#  请将以下代码追加到 record_service.py 文件的末尾
-# ===============================================================
+def add_log_for_stage(stage_id, user, form_data):
+    """为指定阶段添加一条新的学习记录。"""
+    stage = Stage.query.filter_by(id=stage_id, user_id=user.id).first()
+    if not stage:
+        return False, "指定的阶段不存在或无权访问。"
 
-def add_log_for_user(user, form_data):
-    """
-    为指定用户添加一条新的学习记录。
-
-    :param user: 用户对象
-    :param form_data: 从请求表单中获取的数据 (e.g., request.form)
-    :return: 一个元组 (success_boolean, message_string)
-    """
     try:
+        log_date = date.fromisoformat(form_data['log_date'])
+        _get_or_create_week_and_day(stage, log_date)
+
         new_log = LogEntry(
-            user_id=user.id,  # 关联用户
-            log_date=date.fromisoformat(form_data['log_date']),
+            stage_id=stage.id,
+            log_date=log_date,
             task=form_data.get('task'),
             time_slot=form_data.get('time_slot'),
             category=form_data.get('category'),
@@ -93,27 +71,24 @@ def add_log_for_user(user, form_data):
         return True, '新纪录添加成功！'
     except Exception as e:
         db.session.rollback()
-        # 在实际应用中，这里应该记录更详细的错误日志
+        current_app.logger.error(f"Add log error: {e}")
         return False, f'发生错误: {e}'
 
 
 def update_log_for_user(log_id, user, form_data):
-    """
-    更新指定用户的一条学习记录。
-
-    :param log_id: 要更新的记录ID
-    :param user: 用户对象
-    :param form_data: 从请求表单中获取的数据
-    :return: 一个元组 (success_boolean, message_string)
-    """
-    # 查询时确保记录属于该用户，防止越权修改
-    log = LogEntry.query.filter_by(id=log_id, user_id=user.id).first()
-
+    """更新一条学习记录，并在内部进行权限检查。"""
+    log = get_log_entry_for_user(log_id, user)
     if not log:
-        return False, '未找到要编辑的记录。'
+        return False, '未找到要编辑的记录或无权访问。'
 
     try:
-        log.log_date = date.fromisoformat(form_data.get('log_date'))
+        original_date = log.log_date
+        new_date = date.fromisoformat(form_data.get('log_date'))
+
+        if original_date != new_date:
+            _get_or_create_week_and_day(log.stage, new_date)
+
+        log.log_date = new_date
         log.task = form_data.get('task')
         log.time_slot = form_data.get('time_slot')
         log.category = form_data.get('category')
@@ -124,82 +99,87 @@ def update_log_for_user(log_id, user, form_data):
         return True, '记录更新成功！'
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Update log error: {e}")
         return False, f'更新时发生错误: {e}'
 
 
 def delete_log_for_user(log_id, user):
-    """
-    删除指定用户的一条学习记录。
-
-    :param log_id: 要删除的记录ID
-    :param user: 用户对象
-    :return: 一个元组 (success_boolean, message_string)
-    """
-    # 查询时确保记录属于该用户，防止越权删除
-    log = LogEntry.query.filter_by(id=log_id, user_id=user.id).first()
-
+    """删除一条学习记录，并在内部进行权限检查。"""
+    log = get_log_entry_for_user(log_id, user)
     if not log:
-        return False, '未找到要删除的记录。'
-
+        return False, '未找到要删除的记录或无权访问。'
     try:
         db.session.delete(log)
         db.session.commit()
         return True, '记录已删除。'
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Delete log error: {e}")
         return False, f'删除时发生错误: {e}'
 
 
-# ===============================================================
-#  请将以下代码追加到 record_service.py 文件的末尾
-# ===============================================================
-
-def update_weekly_efficiency_for_user(user, year, week_num, efficiency):
-    """
-    为指定用户更新或创建周效率记录。
-
-    :param user: 用户对象
-    :param year: 年份
-    :param week_num: 周数
-    :param efficiency: 效率值
-    :return: 一个元组 (success_boolean, message_string)
-    """
+def update_weekly_efficiency(week_id, user, efficiency):
+    """更新周效率记录。"""
+    weekly_data = get_weekly_data_for_user(week_id, user)
+    if not weekly_data:
+        return False, '未找到周记录或无权访问。'
     try:
-        # merge 会根据主键 (user_id, year, week_num) 自动判断是插入还是更新
-        weekly_data = WeeklyData(user_id=user.id, year=year, week_num=week_num, efficiency=efficiency)
-        db.session.merge(weekly_data)
+        weekly_data.efficiency = efficiency
         db.session.commit()
-        return True, f'第 {week_num} 周效率已更新！'
+        return True, f'第 {weekly_data.week_num} 周效率已更新！'
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Update week efficiency error: {e}")
         return False, f'更新周效率时发生错误: {e}'
 
 
-def update_daily_efficiency_for_user(user, iso_date, efficiency):
-    """
-    为指定用户更新或创建日效率记录。
-
-    :param user: 用户对象
-    :param iso_date: ISO 格式的日期字符串 (e.g., "2023-10-27")
-    :param efficiency: 效率值
-    :return: 一个元组 (success_boolean, message_string)
-    """
+def update_daily_efficiency(day_id, user, efficiency):
+    """更新日效率记录。"""
+    daily_data = get_daily_data_for_user(day_id, user)
+    if not daily_data:
+        return False, '未找到日记录或无权访问。'
     try:
-        log_date = date.fromisoformat(iso_date)
-
-        # 先查询记录是否存在
-        daily_data = DailyData.query.filter_by(log_date=log_date, user_id=user.id).first()
-
-        if daily_data:
-            # 如果存在，则更新
-            daily_data.efficiency = efficiency
-        else:
-            # 如果不存在，则创建新记录
-            daily_data = DailyData(log_date=log_date, efficiency=efficiency, user_id=user.id)
-            db.session.add(daily_data)
-
+        daily_data.efficiency = efficiency
         db.session.commit()
-        return True, f'{log_date.strftime("%Y-%m-%d")} 的效率已更新！'
+        return True, f'{daily_data.log_date.strftime("%Y-%m-%d")} 的效率已更新！'
     except Exception as e:
         db.session.rollback()
+        current_app.logger.error(f"Update day efficiency error: {e}")
         return False, f'更新日效率时发生错误: {e}'
+
+
+def get_log_entry_for_user(log_id, user):
+    """获取单条 LogEntry 并验证其是否属于该用户。"""
+    return LogEntry.query.join(Stage).filter(Stage.user_id == user.id, LogEntry.id == log_id).first()
+
+
+def get_weekly_data_for_user(week_id, user):
+    """获取单条 WeeklyData 并验证其是否属于该用户。"""
+    return WeeklyData.query.join(Stage).filter(Stage.user_id == user.id, WeeklyData.id == week_id).first()
+
+
+def get_daily_data_for_user(day_id, user):
+    """获取单条 DailyData 并验证其是否属于该用户。"""
+    return DailyData.query.join(Stage).filter(Stage.user_id == user.id, DailyData.id == day_id).first()
+
+
+def _get_or_create_week_and_day(stage, log_date):
+    """内部函数：确保给定日期的周和日记录存在，如果不存在则创建。"""
+    daily_data = DailyData.query.filter_by(log_date=log_date, stage_id=stage.id).first()
+    if not daily_data:
+        daily_data = DailyData(log_date=log_date, stage_id=stage.id)
+        db.session.add(daily_data)
+        db.session.flush()
+
+    # ============================================================================
+    # 核心修正
+    # ============================================================================
+    year, week_num = get_custom_week_info(log_date, stage.start_date)
+
+    weekly_data = WeeklyData.query.filter_by(year=year, week_num=week_num, stage_id=stage.id).first()
+    if not weekly_data:
+        weekly_data = WeeklyData(year=year, week_num=week_num, stage_id=stage.id)
+        db.session.add(weekly_data)
+        db.session.flush()
+
+    return weekly_data, daily_data

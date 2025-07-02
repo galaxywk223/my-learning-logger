@@ -172,12 +172,14 @@
                         {% else %}
                             <span class="badge bg-light text-dark border">未设置周效率</span>
                         {% endif %}
+                        {% if week.week_id %}
                         <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
-                           data-url="{{ url_for('records.get_edit_week_form', year=week.year, week_num=week.week_num) }}"
+                           data-url="{{ url_for('records.get_edit_week_form', week_id=week.week_id) }}"
                            title="设置/编辑周效率"
                            onclick="event.stopPropagation();">
                             <i data-lucide="edit-3"></i>
                         </a>
+                        {% endif %}
                     </span>
             </button>
         </h2>
@@ -195,12 +197,14 @@
                             {% else %}
                                 <span class="badge bg-light text-dark border">未设置日效率</span>
                             {% endif %}
+                            {% if day.day_id %}
                             <a href="#" class="action-btn ms-2" data-bs-toggle="modal" data-bs-target="#formModal"
-                               data-url="{{ url_for('records.get_edit_day_form', iso_date=day.date.isoformat()) }}"
+                               data-url="{{ url_for('records.get_edit_day_form', day_id=day.day_id) }}"
                                title="设置/编辑日效率"
                                onclick="event.stopPropagation();">
                                 <i data-lucide="edit-3"></i>
                             </a>
+                            {% endif %}
                         </span>
                     </div>
                     <div class="card-body p-0">
