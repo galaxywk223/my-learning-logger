@@ -44,21 +44,14 @@ class ProductionConfig(Config):
     """
     生产环境配置。
     """
-    # We will set the URI in init_app to ensure os.environ is populated.
-    SQLALCHEMY_DATABASE_URI = None
+    # --- 最终修复：在这里直接、立即地读取环境变量 ---
+    # 这能确保像 `flask db upgrade` 这样的构建命令
+    # 在第一时间就能获取到正确的数据库地址。
+    db_url = os.environ.get('DATABASE_URL')
+    if db_url and db_url.startswith("postgres://"):
+        db_url = db_url.replace("postgres://", "postgresql://", 1)
 
-    @staticmethod
-    def init_app(app):
-        # --- FIX START: Move the logic here ---
-        # This code now runs when the app is being created,
-        # ensuring Render's environment variables are available.
-        db_url = os.environ.get('DATABASE_URL')
-        if db_url and db_url.startswith("postgres://"):
-            db_url = db_url.replace("postgres://", "postgresql://", 1)
-
-        # Set the configuration on the app object
-        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
-        # --- FIX END ---
+    SQLALCHEMY_DATABASE_URI = db_url
 
 
 # 将配置类组织在一个字典中，方便根据环境变量选择
