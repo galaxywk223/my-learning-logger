@@ -1,4 +1,4 @@
-# learning_logger/blueprints/todo.py
+# learning_logger/blueprints/todo.py (MODIFIED FOR OVERDUE STATUS)
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify)
@@ -24,6 +24,15 @@ def list_todos():
     completed_todos = Todo.query.filter_by(user_id=current_user.id, is_completed=True).order_by(
         Todo.completed_at.desc()
     ).all()
+
+    # --- 新增：为待办任务添加是否逾期的状态 ---
+    today = date.today()
+    for todo in pending_todos:
+        if todo.due_date and todo.due_date < today:
+            todo.is_overdue = True
+        else:
+            todo.is_overdue = False
+    # --- 结束新增 ---
 
     return render_template('todo.html', pending_todos=pending_todos, completed_todos=completed_todos)
 
@@ -68,7 +77,6 @@ def toggle_todo(todo_id):
 
     db.session.commit()
 
-    # 如果是 AJAX 请求，返回 JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({'success': True, 'is_completed': todo.is_completed})
 

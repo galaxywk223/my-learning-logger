@@ -1,13 +1,14 @@
-# learning_logger/blueprints/main.py (Fortified Version)
+# learning_logger/blueprints/main.py (FIXED DATETIME AWARENESS)
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, session)
 from flask_login import login_required, current_user
-from datetime import date
+from datetime import date, datetime, timedelta
+import pytz
+from sqlalchemy import func
 
 from .. import db
-# --- MODIFIED: Import all user-related models for a full cleanup ---
-from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData, Motto, Todo
+from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData, Motto, Todo, Category
 
 main_bp = Blueprint('main', __name__)
 
@@ -15,23 +16,97 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 @login_required
 def index():
-    """新的主页，作为功能导航仪表盘。"""
-    return render_template('dashboard.html')
+    """【已修复】仪表盘现在可以正确处理时区。"""
+
+    try:
+        tz = pytz.timezone('Asia/Shanghai')
+        current_hour = datetime.now(tz).hour
+        if 5 <= current_hour < 12:
+            greeting = f"早上好, {current_user.username}！"
+        elif 12 <= current_hour < 18:
+            greeting = f"下午好, {current_user.username}！"
+        else:
+            greeting = f"晚上好, {current_user.username}！"
+    except Exception:
+        greeting = f"你好, {current_user.username}！"
+
+    dashboard_data = {
+        'greeting': greeting,
+        'records_summary': "今日暂无记录",
+        'countdown_summary': "没有进行中的目标",
+        'todo_summary': "没有待办事项"
+    }
+
+    today_duration_minutes = db.session.query(func.sum(LogEntry.actual_duration)).join(Stage).filter(
+        Stage.user_id == current_user.id,
+        LogEntry.log_date == date.today()
+    ).scalar() or 0
+    if today_duration_minutes > 0:
+        hours, minutes = divmod(today_duration_minutes, 60)
+        if hours > 0:
+            dashboard_data['records_summary'] = f"今日已记录 {hours} 小时 {minutes} 分钟"
+        else:
+            dashboard_data['records_summary'] = f"今日已记录 {minutes} 分钟"
+
+    # --- 修复开始 ---
+    now_utc = datetime.now(pytz.utc)
+    next_event = CountdownEvent.query.filter(
+        CountdownEvent.user_id == current_user.id,
+        CountdownEvent.target_datetime_utc > now_utc
+    ).order_by(CountdownEvent.target_datetime_utc.asc()).first()
+
+    if next_event:
+        # 确保从数据库取出的时间是 "aware" 的
+        if next_event.target_datetime_utc.tzinfo is None:
+            next_event.target_datetime_utc = pytz.utc.localize(next_event.target_datetime_utc)
+
+        time_diff = next_event.target_datetime_utc - now_utc
+        days_remaining = time_diff.days
+        if days_remaining >= 0:
+            dashboard_data['countdown_summary'] = f"'{next_event.title}' 还剩 {days_remaining + 1} 天"
+    # --- 修复结束 ---
+
+    pending_todos_count = Todo.query.filter_by(user_id=current_user.id, is_completed=False).count()
+    if pending_todos_count > 0:
+        dashboard_data['todo_summary'] = f"您有 {pending_todos_count} 个待办事项"
+
+    return render_template('dashboard.html', dashboard_data=dashboard_data)
 
 
-@main_bp.route('/settings', methods=['GET', 'POST'])
+# ============================================================================
+# SETTINGS PAGE ROUTES (No changes below this line)
+# ============================================================================
+
+@main_bp.route('/settings')
 @login_required
-def settings():
-    """处理应用设置，并新增了阶段管理功能。"""
+def settings_redirect():
+    return redirect(url_for('main.settings_account'))
+
+
+@main_bp.route('/settings/account')
+@login_required
+def settings_account():
+    return render_template('settings_account.html')
+
+
+@main_bp.route('/settings/content')
+@login_required
+def settings_content():
     user_stages = Stage.query.filter_by(user_id=current_user.id).order_by(Stage.start_date.desc()).all()
-    all_settings = Setting.query.filter_by(user_id=current_user.id).all()
-    settings_dict = {setting.key: setting.value for setting in all_settings}
-    return render_template('settings.html', settings=settings_dict, user_stages=user_stages)
+    user_categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
+    user_mottos = Motto.query.filter_by(user_id=current_user.id).order_by(Motto.id.desc()).all()
+    return render_template('settings_content.html',
+                           user_stages=user_stages,
+                           categories=user_categories,
+                           mottos=user_mottos)
 
 
-# ============================================================================
-# 阶段管理的路由 (Unchanged)
-# ============================================================================
+@main_bp.route('/settings/data')
+@login_required
+def settings_data():
+    return render_template('settings_data.html')
+
+
 @main_bp.route('/stages/add', methods=['POST'])
 @login_required
 def add_stage():
@@ -39,18 +114,18 @@ def add_stage():
     start_date_str = request.form.get('start_date')
     if not name or not start_date_str:
         flash('阶段名称和起始日期均不能为空。', 'error')
-        return redirect(url_for('main.settings'))
-    try:
-        start_date = date.fromisoformat(start_date_str)
-        new_stage = Stage(name=name, start_date=start_date, user_id=current_user.id)
-        db.session.add(new_stage)
-        db.session.commit()
-        flash(f'新阶段 "{name}" 已成功创建！', 'success')
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"创建阶段时出错: {e}")
-        flash('创建阶段时发生错误。', 'error')
-    return redirect(url_for('main.settings'))
+    else:
+        try:
+            start_date = date.fromisoformat(start_date_str)
+            new_stage = Stage(name=name, start_date=start_date, user_id=current_user.id)
+            db.session.add(new_stage)
+            db.session.commit()
+            flash(f'新阶段 "{name}" 已成功创建！', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"创建阶段时出错: {e}")
+            flash('创建阶段时发生错误。', 'error')
+    return redirect(url_for('main.settings_content'))
 
 
 @main_bp.route('/stages/edit/<int:stage_id>', methods=['POST'])
@@ -60,16 +135,16 @@ def edit_stage(stage_id):
     new_name = request.form.get('name')
     if not new_name:
         flash('阶段名称不能为空。', 'error')
-        return redirect(url_for('main.settings'))
-    try:
-        stage.name = new_name
-        db.session.commit()
-        flash('阶段名称已更新。', 'success')
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"编辑阶段 {stage_id} 时出错: {e}")
-        flash('更新阶段名称时发生错误。', 'error')
-    return redirect(url_for('main.settings'))
+    else:
+        try:
+            stage.name = new_name
+            db.session.commit()
+            flash('阶段名称已更新。', 'success')
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f"编辑阶段 {stage_id} 时出错: {e}")
+            flash('更新阶段名称时发生错误。', 'error')
+    return redirect(url_for('main.settings_content'))
 
 
 @main_bp.route('/stages/delete/<int:stage_id>', methods=['POST'])
@@ -84,7 +159,7 @@ def delete_stage(stage_id):
         db.session.rollback()
         current_app.logger.error(f"删除阶段 {stage_id} 时出错: {e}")
         flash('删除阶段时发生错误。', 'error')
-    return redirect(url_for('main.settings'))
+    return redirect(url_for('main.settings_content'))
 
 
 @main_bp.route('/stages/apply/<int:stage_id>', methods=['POST'])
@@ -96,42 +171,27 @@ def apply_stage(stage_id):
     return redirect(url_for('records.list_records'))
 
 
-# ============================================================================
-# 数据清理路由 (Fortified Version)
-# ============================================================================
 @main_bp.route('/clear_my_data', methods=['POST'])
 @login_required
 def clear_my_data():
-    """【强力版】清空当前用户的所有数据，确保无残留。"""
     try:
-        # Step 1: Get all stage IDs for the user to safely delete related data
         user_stages = Stage.query.filter_by(user_id=current_user.id).all()
         stage_ids = [s.id for s in user_stages]
-
-        # Step 2: Explicitly delete all related data first, starting from the "children"
         if stage_ids:
             LogEntry.query.filter(LogEntry.stage_id.in_(stage_ids)).delete(synchronize_session=False)
             DailyData.query.filter(DailyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
             WeeklyData.query.filter(WeeklyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
-
-        # Step 3: Delete all user-level data
         Motto.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         Todo.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         CountdownEvent.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         Setting.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-
-        # Step 4: Delete the parent 'Stage' objects themselves
         if user_stages:
             for stage in user_stages:
                 db.session.delete(stage)
-
-        # Step 5: Commit the transaction
         db.session.commit()
         flash('您的所有个人数据已被成功清空！', 'success')
-
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f'为用户 {current_user.id} 清空数据时出错: {e}', exc_info=True)
         flash(f'清空数据时发生严重错误: {e}', 'error')
-
-    return redirect(url_for('main.settings'))
+    return redirect(url_for('main.settings_account'))

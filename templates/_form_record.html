@@ -9,64 +9,72 @@
 <form action="{{ action_url }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);">
     <div class="modal-body">
         <div class="alert alert-danger error-message" style="display: none;"></div>
-        <div class="row g-3">
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="log_date" class="form-label">日期</label>
-                    <input type="date" class="form-control" id="log_date" name="log_date" value="{{ log.log_date.strftime('%Y-%m-%d') if log and log.log_date else default_date.strftime('%Y-%m-%d') }}" required>
-                </div>
-                <div class="mb-3">
-                    <label for="time_slot" class="form-label">时间段</label>
-                    <input type="text" class="form-control" id="time_slot" name="time_slot" value="{{ log.time_slot if log else '' }}" placeholder="例如: 9:00 - 11:30">
-                </div>
-                <div class="mb-3">
-                    <label for="actual_duration" class="form-label">实际时长 (分钟)</label>
-                    <input type="number" class="form-control" id="actual_duration" name="actual_duration" value="{{ log.actual_duration if log else '' }}" placeholder="例如: 120">
-                </div>
+
+        <div class="mb-3">
+            <label for="task" class="form-label">任务</label>
+            <input type="text" class="form-control form-control-lg" id="task" name="task" value="{{ log.task if log else '' }}" required>
+        </div>
+
+        <div class="row g-2 align-items-end mb-3">
+            <div class="col-md-4">
+                <label for="log_date" class="form-label">日期</label>
+                <input type="date" class="form-control" id="log_date" name="log_date" value="{{ log.log_date.strftime('%Y-%m-%d') if log and log.log_date else default_date.strftime('%Y-%m-%d') }}" required>
             </div>
-            <div class="col-md-6">
-                <div class="mb-3">
-                    <label for="task" class="form-label">任务</label>
-                    <input type="text" class="form-control" id="task" name="task" value="{{ log.task if log else '' }}" required placeholder="学习的具体内容">
-                </div>
-                <div class="row">
-                    <div class="col-sm-6 mb-3">
-                        <label for="category" class="form-label">大分类</label>
-                        <select class="form-select" id="category" name="category_id">
-                            <option value="">请选择大分类</option>
-                            {% for category in all_categories %}
-                                <option value="{{ category.id }}" {% if log and log.subcategory and log.subcategory.category_id == category.id %}selected{% endif %}>
-                                    {{ category.name }}
-                                </option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    <div class="col-sm-6 mb-3">
-                        <label for="subcategory_id" class="form-label">小分类</label>
-                        <select class="form-select" id="subcategory_id" name="subcategory_id">
-                            <option value="">请先选择大分类</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">心情</label>
-                    <div class="d-flex flex-nowrap gap-0">
-                         {% for val, emoji in {5: '😃', 4: '😊', 3: '😐', 2: '😟', 1: '😠'}.items() %}
-                        <div class="form-check form-check-inline me-0">
-                            <input class="btn-check" type="radio" name="mood" id="mood{{ val }}" value="{{ val }}" {% if log and log.mood == val %}checked{% endif %}>
-                            <label class="btn btn-outline-secondary" for="mood{{ val }}" style="font-size: 1.5rem; padding: 0.25rem 0.6rem;">{{ emoji }}</label>
-                        </div>
-                        {% endfor %}
-                    </div>
-                </div>
+            <div class="col-md-4">
+                <label for="time_slot" class="form-label">时间段</label>
+                <input type="text" class="form-control" id="time_slot" name="time_slot" value="{{ log.time_slot if log else '' }}">
             </div>
-            <div class="col-12">
-                 <div class="mb-2">
-                    <label for="notes" class="form-label">笔记</label>
-                    <textarea class="form-control" id="notes" name="notes" rows="3" placeholder="记录一些关键点或想法...">{{ log.notes if log else '' }}</textarea>
+            <div class="col-md-4">
+                <label class="form-label">实际时长</label>
+                <div class="input-group">
+                    <input type="number" class="form-control" name="duration_hours" min="0" value="{{ (log.actual_duration // 60) if log and log.actual_duration else '' }}">
+                    <span class="input-group-text">小时</span>
+                    <input type="number" class="form-control" name="duration_minutes" min="0" max="59" value="{{ (log.actual_duration % 60) if log and log.actual_duration else '' }}">
+                    <span class="input-group-text">分钟</span>
                 </div>
             </div>
         </div>
+
+        <div class="row g-2 mb-3">
+            <div class="col-sm-6">
+                <label for="category" class="form-label">分类</label>
+                <select class="form-select" id="category" name="category_id">
+                    <option value="">请选择分类</option>
+                    {% for category in all_categories %}
+                        <option value="{{ category.id }}" {% if log and log.subcategory and log.subcategory.category_id == category.id %}selected{% endif %}>
+                            {{ category.name }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-sm-6">
+                <label for="subcategory_id" class="form-label">标签</label>
+                <select class="form-select" id="subcategory_id" name="subcategory_id">
+                    <option value="">请先选择分类</option>
+                </select>
+            </div>
+        </div>
+
+        <hr class="my-3">
+
+        <div class="row g-3">
+            <div class="col-12">
+                <label for="notes" class="form-label">笔记</label>
+                <textarea class="form-control" id="notes" name="notes" rows="3">{{ log.notes if log else '' }}</textarea>
+            </div>
+            <div class="col-12">
+                 <label class="form-label d-block">心情</label>
+                 <div class="d-flex flex-nowrap gap-0">
+                     {% for val, emoji in {5: '😃', 4: '😊', 3: '😐', 2: '😟', 1: '😠'}.items() %}
+                    <div class="form-check form-check-inline me-0">
+                        <input class="btn-check" type="radio" name="mood" id="mood{{ val }}" value="{{ val }}" {% if log and log.mood == val %}checked{% endif %}>
+                        <label class="btn btn-outline-secondary" for="mood{{ val }}" style="font-size: 1.5rem; padding: 0.25rem 0.6rem;">{{ emoji }}</label>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
     </div>
     <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
@@ -78,20 +86,15 @@
 </form>
 
 <script>
-// BUG FIX: Removed the incorrect DOMContentLoaded wrapper
 (function() {
-    // 将后端传入的分类数据转换为JS对象
     const subcategoriesData = {{ all_subcategories|tojson }};
     const categorySelect = document.getElementById('category');
     const subcategorySelect = document.getElementById('subcategory_id');
-
-    // 用于在编辑时预选中的小分类ID
     const selectedSubcategoryId = '{{ log.subcategory_id if log else '' }}';
 
     function updateSubcategories() {
         const categoryId = categorySelect.value;
-        // 清空小分类下拉菜单
-        subcategorySelect.innerHTML = '<option value="">请选择小分类</option>';
+        subcategorySelect.innerHTML = '<option value="">请选择标签</option>';
 
         if (categoryId && subcategoriesData[categoryId]) {
             subcategoriesData[categoryId].forEach(function(sub) {
@@ -99,17 +102,11 @@
                 subcategorySelect.add(option);
             });
         }
-
-        // 如果是编辑模式，并且当前选中的大分类匹配，则尝试选中之前的小分类
         if (selectedSubcategoryId) {
              subcategorySelect.value = selectedSubcategoryId;
         }
     }
-
-    // 当大分类改变时，更新小分类列表
     categorySelect.addEventListener('change', updateSubcategories);
-
-    // 页面加载时，如果已有选中的大分类（编辑模式），则立即触发一次更新
     if (categorySelect.value) {
         updateSubcategories();
     }

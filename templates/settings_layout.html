@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{# 这是所有设置页面的新基础布局。 #}
+
+{% block title %}应用设置{% endblock %}
+
+{% block content %}
+<style>
+    .settings-layout {
+        display: flex;
+        gap: 2rem;
+    }
+    .settings-nav {
+        flex-shrink: 0;
+        width: 220px;
+    }
+    .settings-nav .nav-link {
+        color: #e9ecef;
+        background-color: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        margin-bottom: 0.5rem;
+        transition: all 0.2s ease-in-out;
+    }
+    .settings-nav .nav-link:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(255, 255, 255, 0.4);
+        transform: translateX(5px);
+    }
+    .settings-nav .nav-link.active {
+        background-color: var(--color-primary);
+        border-color: var(--color-primary);
+        color: white;
+        font-weight: 500;
+    }
+    .settings-content {
+        flex-grow: 1;
+    }
+    /* 设置页面卡片的通用样式 */
+    .settings-card .card-header {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+    .settings-card .card-title {
+        font-family: 'Poppins', sans-serif;
+    }
+    .danger-zone {
+        border-color: #dc3545;
+    }
+    .danger-zone .card-header {
+        background-color: #f8d7da;
+        color: #58151c;
+    }
+</style>
+
+<div class="page-header">
+    <h1>应用设置</h1>
+    <p class="lead text-secondary mb-0">集中管理您的账户、内容和数据。</p>
+</div>
+
+<div class="settings-layout">
+    <aside class="settings-nav">
+        <div class="list-group">
+            <a href="{{ url_for('main.settings_account') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_account' %}active{% endif %}">
+                <i data-lucide="user" class="me-2"></i>账户设置
+            </a>
+            <a href="{{ url_for('main.settings_content') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_content' %}active{% endif %}">
+                <i data-lucide="layout-list" class="me-2"></i>内容管理
+            </a>
+            <a href="{{ url_for('main.settings_data') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_data' %}active{% endif %}">
+                <i data-lucide="database" class="me-2"></i>数据管理
+            </a>
+        </div>
+    </aside>
+
+    <main class="settings-content">
+        {# 这个块将被子模板填充 #}
+        {% block settings_content %}{% endblock %}
+    </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // 确保子模板中使用的图标能被渲染
+    lucide.createIcons();
+</script>
+{# 修复：使用正确的语法定义一个可选的块 #}
+{% block page_scripts %}{% endblock %}
+{% endblock %}

@@ -25,61 +25,18 @@
             background-repeat: no-repeat;
             background-attachment: fixed;
         }
-
-        /* --- Glassmorphism Style --- */
-        .sidebar {
-            background-color: rgba(20, 25, 35, 0.7); /* 深色半透明背景 */
-            backdrop-filter: blur(12px);
-            -webkit-backdrop-filter: blur(12px); /* 兼容 Safari */
-            border-right: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .main-content {
-            background-color: transparent; /* 让主内容区透明以显示背景图 */
-        }
-
-        /* 内容元素样式，确保内部文字可读 */
-        .card, .accordion-item, .modal-content {
-            background-color: rgba(255, 255, 255, 0.95) !important;
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .accordion-button {
-            background-color: rgba(255, 255, 255, 0.8) !important;
-        }
-
-        /* --- Text Color Adjustments --- */
-        .sidebar .logo-text, .sidebar .nav-link span, .sidebar .sidebar-footer p {
-            color: #e9ecef; /* 浅灰色文字，非纯白 */
-        }
-
-        .sidebar .nav-link i {
-            color: #ced4da; /* 稍微暗一点的图标颜色 */
-        }
-
-        .sidebar .nav-link.active, .sidebar .nav-link:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-        }
-
+        .sidebar { background-color: rgba(20, 25, 35, 0.7); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-right: 1px solid rgba(255, 255, 255, 0.1); }
+        .main-content { background-color: transparent; }
+        .card, .accordion-item, .modal-content { background-color: rgba(255, 255, 255, 0.95) !important; border: 1px solid rgba(255, 255, 255, 0.2); }
+        .accordion-button { background-color: rgba(255, 255, 255, 0.8) !important; }
+        .sidebar .logo-text, .sidebar .nav-link span, .sidebar .sidebar-footer p { color: #e9ecef; }
+        .sidebar .nav-link i { color: #ced4da; }
+        .sidebar .nav-link.active, .sidebar .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
         .sidebar .nav-link.active span, .sidebar .nav-link.active i,
-        .sidebar .nav-link:hover span, .sidebar .nav-link:hover i {
-            color: #ffffff; /* 激活/悬停时为纯白，以示突出 */
-        }
-
-        /* 针对页面标题等可能直接在背景上的文字 */
-        .page-header h1, .page-header-records h1 {
-            color: #f8f9fa;
-            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-        }
-
-        .lead {
-            color: #f8f9fa;
-            text-shadow: 0 0 8px rgba(0, 0, 0, 0.5);
-        }
-
-        .text-secondary {
-            color: #FFF0F5 !important;
-        }
+        .sidebar .nav-link:hover span, .sidebar .nav-link:hover i { color: #ffffff; }
+        .page-header h1, .page-header-records h1 { color: #f8f9fa; text-shadow: 0 0 8px rgba(0, 0, 0, 0.5); }
+        .lead { color: #f8f9fa; text-shadow: 0 0 8px rgba(0, 0, 0, 0.5); }
+        .text-secondary { color: #FFF0F5 !important; }
     </style>
 </head>
 <body>
@@ -90,82 +47,45 @@
             <span class="logo-text">学习记录器</span>
         </div>
         <nav class="sidebar-nav">
-            {# --- 只有登录后才显示这些核心功能链接 --- #}
             {% if current_user.is_authenticated %}
-            <a href="{{ url_for('main.index') }}"
-               class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">
-                <i data-lucide="layout-dashboard"></i>
-                <span>仪表盘</span>
+            <a href="{{ url_for('main.index') }}" class="nav-link {% if request.endpoint == 'main.index' %}active{% endif %}">
+                <i data-lucide="layout-dashboard"></i><span>仪表盘</span>
             </a>
-            <a href="{{ url_for('records.list_records') }}"
-               class="nav-link {% if request.endpoint and 'records' in request.endpoint %}active{% endif %}">
-                <i data-lucide="notebook-pen"></i>
-                <span>学习记录</span>
+            <a href="{{ url_for('records.list_records') }}" class="nav-link {% if request.endpoint and 'records' in request.endpoint %}active{% endif %}">
+                <i data-lucide="notebook-pen"></i><span>学习记录</span>
             </a>
-            <a href="{{ url_for('charts.chart_page') }}"
-               class="nav-link {% if request.endpoint == 'charts.chart_page' %}active{% endif %}">
-                <i data-lucide="bar-chart-3"></i>
-                <span>效率图表</span>
+
+            <a href="{{ url_for('charts.chart_page') }}" class="nav-link {% if 'charts' in request.endpoint or 'category_charts' in request.endpoint %}active{% endif %}">
+                <i data-lucide="bar-chart-3"></i><span>统计分析</span>
             </a>
-            <a href="{{ url_for('category_charts.chart_page') }}"
-               class="nav-link {% if request.endpoint == 'category_charts.chart_page' %}active{% endif %}">
-                <i data-lucide="pie-chart"></i>
-                <span>分类统计</span>
+
+            <a href="{{ url_for('countdown.list_events') }}" class="nav-link {% if request.endpoint and 'countdown' in request.endpoint %}active{% endif %}">
+                <i data-lucide="timer"></i><span>倒计时</span>
             </a>
-            <a href="{{ url_for('countdown.list_events') }}"
-               class="nav-link {% if request.endpoint and 'countdown' in request.endpoint %}active{% endif %}">
-                <i data-lucide="timer"></i>
-                <span>倒计时</span>
+            <a href="{{ url_for('todo.list_todos') }}" class="nav-link {% if request.endpoint and 'todo' in request.endpoint %}active{% endif %}">
+                <i data-lucide="check-square"></i><span>备忘录</span>
             </a>
-            <a href="{{ url_for('todo.list_todos') }}"
-               class="nav-link {% if request.endpoint and 'todo' in request.endpoint %}active{% endif %}">
-                <i data-lucide="check-square"></i>
-                <span>备忘录</span>
-            </a>
-            <a href="{{ url_for('category.management') }}"
-               class="nav-link {% if request.endpoint and 'category' in request.endpoint %}active{% endif %}">
-                <i data-lucide="folder-kanban"></i>
-                <span>分类管理</span>
-            </a>
-            <a href="{{ url_for('motto.management') }}"
-               class="nav-link {% if request.endpoint and 'motto' in request.endpoint %}active{% endif %}">
-                <i data-lucide="quote"></i>
-                <span>格言管理</span>
-            </a>
-            <a href="{{ url_for('main.settings') }}"
-               class="nav-link {% if request.endpoint == 'main.settings' %}active{% endif %}">
-                <i data-lucide="settings"></i>
-                <span>设置</span>
+            <a href="{{ url_for('main.settings_redirect') }}" class="nav-link {% if 'settings' in request.endpoint %}active{% endif %}">
+                <i data-lucide="settings"></i><span>设置</span>
             </a>
             {% endif %}
         </nav>
 
-        {# --- 新增：底部用户菜单 --- #}
         <div class="sidebar-footer">
             <ul class="nav flex-column">
                 {% if current_user.is_authenticated %}
                 <li class="nav-item">
-                     <span class="nav-link text-light">
-                         <i data-lucide="user-circle-2" class="me-2"></i>你好, {{ current_user.username }}
-                     </span>
+                     <span class="nav-link text-light"><i data-lucide="user-circle-2" class="me-2"></i>你好, {{ current_user.username }}</span>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{ url_for('auth.logout') }}">
-                        <i data-lucide="log-out" class="me-2"></i>登出
-                    </a>
+                    <a class="nav-link" href="{{ url_for('auth.logout') }}"><i data-lucide="log-out" class="me-2"></i>登出</a>
                 </li>
                 {% else %}
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}"
-                       href="{{ url_for('auth.login') }}">
-                        <i data-lucide="log-in" class="me-2"></i>登录
-                    </a>
+                    <a class="nav-link {% if request.endpoint == 'auth.login' %}active{% endif %}" href="{{ url_for('auth.login') }}"><i data-lucide="log-in" class="me-2"></i>登录</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}"
-                       href="{{ url_for('auth.register') }}">
-                        <i data-lucide="user-plus" class="me-2"></i>注册
-                    </a>
+                    <a class="nav-link {% if request.endpoint == 'auth.register' %}active{% endif %}" href="{{ url_for('auth.register') }}"><i data-lucide="user-plus" class="me-2"></i>注册</a>
                 </li>
                 {% endif %}
             </ul>
@@ -187,7 +107,6 @@
             </div>
             {% endif %}
             {% endwith %}
-
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -196,11 +115,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         xintegrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
-
-<script>
-    lucide.createIcons();
-</script>
-
+<script>lucide.createIcons();</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

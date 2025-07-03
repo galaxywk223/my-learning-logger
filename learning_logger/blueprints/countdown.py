@@ -1,15 +1,13 @@
-# learning_logger/blueprints/countdown.py (Refactored to use Stages)
+# learning_logger/blueprints/countdown.py (FIXED FOR DATA COMPATIBILITY)
 
 from datetime import date, datetime
 import pytz
 
-# --- MODIFIED: Import Stage model and session ---
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify, current_app, session)
 from flask_login import login_required, current_user
 
 from .. import db
-# --- MODIFIED: Import Stage instead of Setting ---
 from ..models import CountdownEvent, Stage
 from ..helpers import get_custom_week_info
 
@@ -23,21 +21,23 @@ BEIJING_TZ = pytz.timezone('Asia/Shanghai')
 def list_events():
     """
     显示当前用户的所有倒计时事件的列表。
-    【已修正】现在根据当前激活的“学习阶段”来计算相对时间。
+    【已修复】兼容没有创建日期的旧数据。
     """
     now_utc = datetime.now(pytz.utc)
-    all_events = CountdownEvent.query.filter_by(user_id=current_user.id).order_by(CountdownEvent.target_datetime_utc.asc()).all()
+
+    # --- 修复：移除 isnot(None) 的过滤，查询所有事件 ---
+    all_events = CountdownEvent.query.filter_by(
+        user_id=current_user.id
+    ).order_by(CountdownEvent.target_datetime_utc.asc()).all()
 
     active_events = []
     expired_events = []
 
-    # --- CORE FIX: Use the active stage to calculate relative time ---
     active_stage_id = session.get('active_stage_id')
     active_stage = Stage.query.get(active_stage_id) if active_stage_id else None
 
-    current_relative_time = "请先选择或创建一个学习阶段" # Default message
+    current_relative_time = "请先选择或创建一个学习阶段"
     if active_stage:
-        # If an active stage is found, calculate the time relative to it.
         start_date = active_stage.start_date
         now_beijing = now_utc.astimezone(BEIJING_TZ)
         _, week_num = get_custom_week_info(now_beijing.date(), start_date)
@@ -45,19 +45,48 @@ def list_events():
         day_of_week_str = day_map.get(now_beijing.weekday(), '')
         hour = now_beijing.hour
         time_of_day_str = "凌晨" if 0 <= hour < 6 else "上午" if hour < 12 else "中午" if hour < 14 else "下午" if hour < 18 else "晚上"
-        current_relative_time = f"当前阶段: {active_stage.name} - 第 {week_num} 周周{day_of_week_str}{time_of_day_str}"
-    # --- END OF FIX ---
+        current_relative_time = f"{active_stage.name} - 第 {week_num} 周周{day_of_week_str}{time_of_day_str}"
 
     for event in all_events:
         if event.target_datetime_utc.tzinfo is None:
             event.target_datetime_utc = pytz.utc.localize(event.target_datetime_utc)
+
         event.target_datetime_beijing = event.target_datetime_utc.astimezone(BEIJING_TZ)
         event.target_iso_utc = event.target_datetime_utc.isoformat()
+
         if event.target_datetime_utc < now_utc:
             event.is_expired = True
             expired_events.append(event)
         else:
             event.is_expired = False
+
+            # --- 修复：检查旧数据 ---
+            if event.created_at_utc:
+                # 对于新数据，正常计算
+                if event.created_at_utc.tzinfo is None:
+                    event.created_at_utc = pytz.utc.localize(event.created_at_utc)
+
+                time_remaining = event.target_datetime_utc - now_utc
+                total_delta = event.target_datetime_utc - event.created_at_utc
+                elapsed_delta = now_utc - event.created_at_utc
+
+                if total_delta.total_seconds() > 0:
+                    event.progress_percentage = min((elapsed_delta.total_seconds() / total_delta.total_seconds()) * 100,
+                                                    100)
+                else:
+                    event.progress_percentage = 100
+
+                if time_remaining.days < 1:
+                    event.card_status = 'urgent'
+                elif time_remaining.days < 7:
+                    event.card_status = 'warning'
+                else:
+                    event.card_status = 'normal'
+            else:
+                # 对于没有创建日期的旧数据，提供一个安全的默认值
+                event.progress_percentage = 0
+                event.card_status = 'normal'
+
             active_events.append(event)
 
     expired_events.sort(key=lambda x: x.target_datetime_utc, reverse=True)
@@ -69,19 +98,23 @@ def list_events():
         current_relative_time=current_relative_time
     )
 
-# --- Other routes (add, edit, delete) remain unchanged ---
 
+# ... 其他路由 (get_add_form, edit, delete 等) 保持不变 ...
 @countdown_bp.route('/form/add')
 @login_required
 def get_add_form():
-    return render_template('_form_countdown.html', event=None, action_url=url_for('countdown.add'), submit_button_text='添加目标')
+    return render_template('_form_countdown.html', event=None, action_url=url_for('countdown.add'),
+                           submit_button_text='添加目标')
+
 
 @countdown_bp.route('/form/edit/<int:event_id>')
 @login_required
 def get_edit_form(event_id):
     event = CountdownEvent.query.filter_by(id=event_id, user_id=current_user.id).first_or_404()
     event.target_datetime_beijing = event.target_datetime_utc.astimezone(BEIJING_TZ)
-    return render_template('_form_countdown.html', event=event, action_url=url_for('countdown.edit', event_id=event.id), submit_button_text='更新目标')
+    return render_template('_form_countdown.html', event=event, action_url=url_for('countdown.edit', event_id=event.id),
+                           submit_button_text='更新目标')
+
 
 def _process_form_and_get_utc_datetime():
     title = request.form.get('title')
@@ -92,6 +125,7 @@ def _process_form_and_get_utc_datetime():
     local_dt_naive = datetime.strptime(f"{target_date_str} {target_time_str}", '%Y-%m-%d %H:%M')
     local_dt_aware = BEIJING_TZ.localize(local_dt_naive)
     return title, local_dt_aware.astimezone(pytz.utc)
+
 
 @countdown_bp.route('/add', methods=['POST'])
 @login_required
@@ -107,6 +141,7 @@ def add():
         current_app.logger.error(f"添加倒计时事件时出错: {e}")
         return jsonify({'success': False, 'message': f'添加目标时出错: {e}'}), 400
 
+
 @countdown_bp.route('/edit/<int:event_id>', methods=['POST'])
 @login_required
 def edit(event_id):
@@ -121,6 +156,7 @@ def edit(event_id):
         db.session.rollback()
         current_app.logger.error(f"编辑事件 {event_id} 时出错: {e}")
         return jsonify({'success': False, 'message': f'更新目标时出错: {e}'}), 400
+
 
 @countdown_bp.route('/delete/<int:event_id>', methods=['POST'])
 @login_required

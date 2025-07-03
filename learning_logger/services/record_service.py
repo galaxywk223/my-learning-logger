@@ -3,7 +3,6 @@ from datetime import date, timedelta
 from itertools import groupby
 from flask import current_app
 from .. import db
-# BUG FIX: Added 'Category' to the import list
 from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCategory
 from ..helpers import get_custom_week_info
 
@@ -33,10 +32,8 @@ def _get_or_create_weekly_data(year, week_num, stage_id, score):
 
 # --- Public Calculation Trigger ---
 def recalculate_efficiency_for_stage(stage):
-    """【计算引擎】对一个阶段内的所有效率进行一次完整的重新计算。"""
     try:
         all_logs = stage.log_entries.all()
-        # Clean up old data first
         DailyData.query.filter_by(stage_id=stage.id).delete()
         WeeklyData.query.filter_by(stage_id=stage.id).delete()
         db.session.commit()
@@ -51,7 +48,7 @@ def recalculate_efficiency_for_stage(stage):
             _get_or_create_daily_data(log_date, stage.id, score)
             daily_efficiencies_map[log_date] = score
 
-        db.session.commit()  # Commit daily data first
+        db.session.commit()
 
         next_stage = Stage.query.filter(Stage.user_id == stage.user_id, Stage.start_date > stage.start_date).order_by(
             Stage.start_date.asc()).first()
@@ -63,13 +60,10 @@ def recalculate_efficiency_for_stage(stage):
             theoretical_week_end = theoretical_week_start + timedelta(days=6)
             effective_start = max(theoretical_week_start, stage.start_date)
             effective_end = min(theoretical_week_end, stage_end_date, date.today())
-
             days_in_week = (effective_end - effective_start).days + 1 if effective_end >= effective_start else 0
-
             total_score = sum(
                 daily_efficiencies_map.get(effective_start + timedelta(days=i), 0) for i in range(days_in_week))
             average_score = total_score / days_in_week if days_in_week > 0 else 0
-
             _get_or_create_weekly_data(year, week_num, stage.id, average_score)
 
         db.session.commit()
@@ -82,18 +76,14 @@ def recalculate_efficiency_for_stage(stage):
 
 # --- Read-Only Display Service ---
 def get_structured_logs_for_stage(stage, sort_order='desc'):
-    """【只读版】此函数现在只负责从数据库读取和组织数据。"""
     is_reverse = (sort_order == 'desc')
     all_logs = stage.log_entries.order_by(LogEntry.log_date.asc(), LogEntry.id.asc()).all()
     day_data_map = {d.log_date: d for d in stage.daily_data.all()}
     week_data_map = {(w.year, w.week_num): w for w in stage.weekly_data.all()}
-
     structured_logs = []
     if not all_logs:
         return structured_logs
-
     logs_by_week_iter = groupby(all_logs, key=lambda log: get_custom_week_info(log.log_date, stage.start_date))
-
     for (year, week_num), week_logs in logs_by_week_iter:
         days_in_week = []
         logs_by_day_iter = groupby(list(week_logs), key=lambda log: log.log_date)
@@ -115,16 +105,21 @@ def add_log_for_stage(stage_id, user, form_data):
     try:
         subcategory_id = form_data.get('subcategory_id', type=int)
         if subcategory_id:
-            # 验证小分类是否属于该用户
-            subcategory = SubCategory.query.join(Category).filter(
-                SubCategory.id == subcategory_id, Category.user_id == user.id).first()
-            if not subcategory:
-                return False, "选择了无效的分类。"
+            subcategory = SubCategory.query.join(Category).filter(SubCategory.id == subcategory_id,
+                                                                  Category.user_id == user.id).first()
+            if not subcategory: return False, "选择了无效的分类。"
+
+        # --- MODIFIED: Calculate total duration from hours and minutes ---
+        hours_str = form_data.get('duration_hours', '0')
+        minutes_str = form_data.get('duration_minutes', '0')
+        hours = int(hours_str) if hours_str and hours_str.strip() else 0
+        minutes = int(minutes_str) if minutes_str and minutes_str.strip() else 0
+        total_duration = (hours * 60) + minutes
 
         new_log = LogEntry(stage_id=stage.id, log_date=date.fromisoformat(form_data['log_date']),
                            task=form_data.get('task'), time_slot=form_data.get('time_slot'),
                            notes=form_data.get('notes'),
-                           actual_duration=form_data.get('actual_duration', type=int),
+                           actual_duration=total_duration,  # Use calculated total duration
                            mood=form_data.get('mood', type=int),
                            subcategory_id=subcategory_id)
         db.session.add(new_log)
@@ -142,20 +137,24 @@ def update_log_for_user(log_id, user, form_data):
     if not log: return False, '未找到要编辑的记录或无权访问。'
     try:
         stage = log.stage
-
         subcategory_id = form_data.get('subcategory_id', type=int)
         if subcategory_id:
-            # 验证小分类是否属于该用户
-            subcategory = SubCategory.query.join(Category).filter(
-                SubCategory.id == subcategory_id, Category.user_id == user.id).first()
-            if not subcategory:
-                return False, "选择了无效的分类。"
+            subcategory = SubCategory.query.join(Category).filter(SubCategory.id == subcategory_id,
+                                                                  Category.user_id == user.id).first()
+            if not subcategory: return False, "选择了无效的分类。"
+
+        # --- MODIFIED: Calculate total duration from hours and minutes ---
+        hours_str = form_data.get('duration_hours', '0')
+        minutes_str = form_data.get('duration_minutes', '0')
+        hours = int(hours_str) if hours_str and hours_str.strip() else 0
+        minutes = int(minutes_str) if minutes_str and minutes_str.strip() else 0
+        total_duration = (hours * 60) + minutes
 
         log.log_date = date.fromisoformat(form_data.get('log_date'))
         log.task = form_data.get('task')
         log.time_slot = form_data.get('time_slot')
         log.notes = form_data.get('notes')
-        log.actual_duration = form_data.get('actual_duration', type=int)
+        log.actual_duration = total_duration  # Use calculated total duration
         log.mood = form_data.get('mood', type=int)
         log.subcategory_id = subcategory_id
 

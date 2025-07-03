@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}统计图表{% endblock %}
+{% block title %}统计分析{% endblock %}
 
 {% block content %}
 <style>
@@ -9,16 +9,17 @@
         border: 1px solid #E5E7EB;
         border-left-width: 5px;
         border-radius: var(--border-radius-md);
-        padding: 1.5rem;
+        padding: 1.25rem;
         display: flex;
         align-items: center;
-        gap: 1.5rem;
+        gap: 1.25rem;
         box-shadow: var(--box-shadow);
+        height: 100%;
     }
 
     .kpi-card .icon-wrapper {
-        width: 56px;
-        height: 56px;
+        width: 48px;
+        height: 48px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -28,127 +29,185 @@
 
     .kpi-card .kpi-value {
         font-family: 'Poppins', sans-serif;
-        font-size: 2rem;
-        font-weight: 700;
+        font-size: 1.5rem;
+        font-weight: 600;
         line-height: 1.2;
         color: var(--color-text-dark);
     }
 
     .kpi-card .kpi-label {
-        font-size: 1rem;
+        font-size: 0.9rem;
         color: var(--color-text-medium);
     }
 
-    .kpi-card-duration {
-        border-left-color: #F97316;
-    }
-
-    .kpi-card-duration .icon-wrapper {
-        background-color: #FFEDD5;
-    }
-
-    .kpi-card-duration .icon-wrapper i {
-        color: #EA580C;
-    }
-
-    .kpi-card-days {
-        border-left-color: #EF4444;
-    }
-
-    .kpi-card-days .icon-wrapper {
-        background-color: #FEE2E2;
-    }
-
-    .kpi-card-days .icon-wrapper i {
-        color: #DC2626;
-    }
-
     .kpi-card-avg {
-        border-left-color: var(--color-primary);
+        border-left-color: #3B82F6;
     }
 
     .kpi-card-avg .icon-wrapper {
-        background-color: var(--color-primary-light);
+        background-color: #DBEAFE;
     }
 
     .kpi-card-avg .icon-wrapper i {
-        color: var(--color-primary-dark);
+        color: #2563EB;
+    }
+
+    .kpi-card-star {
+        border-left-color: #FBBF24;
+    }
+
+    .kpi-card-star .icon-wrapper {
+        background-color: #FEF3C7;
+    }
+
+    .kpi-card-star .icon-wrapper i {
+        color: #D97706;
+    }
+
+    .kpi-card-trend {
+        border-left-color: #10B981;
+    }
+
+    .kpi-card-trend .icon-wrapper {
+        background-color: #D1FAE5;
+    }
+
+    .kpi-card-trend .icon-wrapper i {
+        color: #047857;
     }
 
     .chart-container-wrapper {
-        height: 450px; /* Increased height for annotations */
+        height: 450px;
         position: relative;
     }
 
-    .chart-view-buttons {
-        position: -webkit-sticky;
-        position: sticky;
-        top: 1rem;
-        z-index: 1020;
-        align-self: flex-start;
+    #dynamic-controls .controls-container {
+        display: none;
     }
 </style>
 
-<div class="page-header d-flex justify-content-between align-items-center">
-    <div>
-        <h1>统计图表</h1>
-        <p class="lead text-secondary mb-0">通过数据洞察你的学习模式。</p>
-    </div>
-    <div class="chart-view-buttons">
-        <div class="btn-group btn-group-sm">
-            <button type="button" class="btn btn-outline-primary active" id="viewWeekly">周视图</button>
-            <button type="button" class="btn btn-outline-primary" id="viewDaily">日视图</button>
+<div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+    <div><h1>统计分析</h1>
+        <p class="lead text-secondary mb-0">通过数据洞察学习模式。</p></div>
+    <div class="d-flex align-items-center gap-3">
+        <a href="{{ url_for('charts.export_charts') }}" class="btn btn-success d-flex align-items-center gap-2">
+            <i data-lucide="download"></i>
+            <span>导出全部图表</span>
+        </a>
+
+        <ul class="nav nav-pills" id="chartsTab" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends-pane"
+                        type="button"><i data-lucide="line-chart" class="me-2"></i>趋势分析
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-pane"
+                        type="button"><i data-lucide="pie-chart" class="me-2"></i>分类占比
+                </button>
+            </li>
+        </ul>
+        <div id="dynamic-controls" class="ms-3">
+            <div id="trends-controls" class="controls-container">
+                <div class="btn-group btn-group-sm">
+                    <button type="button" class="btn btn-outline-primary active" data-view="weekly">周视图</button>
+                    <button type="button" class="btn btn-outline-primary" data-view="daily">日视图</button>
+                </div>
+            </div>
+            <div id="category-controls" class="controls-container"><select id="stageFilter"
+                                                                           class="form-select form-select-sm">
+                <option value="all" selected>全部历史</option>
+                {% for stage in stages %}
+                <option value="{{ stage.id }}">{{ stage.name }}</option>
+                {% endfor %}</select></div>
         </div>
     </div>
 </div>
 
-<div class="row g-4 mb-4">
-    <div class="col-lg-4 col-md-6">
-        <div class="kpi-card kpi-card-duration">
-            <div class="icon-wrapper"><i data-lucide="clock"></i></div>
-            <div>
-                <div class="kpi-value" id="kpi-total-hours">...</div>
-                <div class="kpi-label">总学习时长 (小时)</div>
+<div class="tab-content pt-3" id="chartsTabContent">
+    <div class="tab-pane fade show active" id="trends-pane" role="tabpanel">
+        <div class="row g-4 mb-4">
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card kpi-card-avg">
+                    <div class="icon-wrapper"><i data-lucide="timer"></i></div>
+                    <div>
+                        <div class="kpi-value" id="kpi-avg-time">--</div>
+                        <div class="kpi-label">平均每日时长</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card kpi-card-star">
+                    <div class="icon-wrapper"><i data-lucide="star"></i></div>
+                    <div>
+                        <div class="kpi-value" id="kpi-efficiency-star">--</div>
+                        <div class="kpi-label">效率之星</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-4 col-md-6">
+                <div class="kpi-card kpi-card-trend">
+                    <div class="icon-wrapper"><i data-lucide="trending-up"></i></div>
+                    <div>
+                        <div class="kpi-value" id="kpi-weekly-trend">--</div>
+                        <div class="kpi-label">本周趋势 (vs 上周)</div>
+                    </div>
+                </div>
             </div>
         </div>
-    </div>
-    <div class="col-lg-4 col-md-6">
-        <div class="kpi-card kpi-card-days">
-            <div class="icon-wrapper"><i data-lucide="calendar-days"></i></div>
-            <div>
-                <div class="kpi-value" id="kpi-total-days">...</div>
-                <div class="kpi-label">总学习天数</div>
+        <div class="row g-4">
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header"><h5 class="card-title mb-0">学习时长分析</h5></div>
+                    <div class="card-body">
+                        <div class="chart-container-wrapper">
+                            <canvas id="durationChart"></canvas>
+                        </div>
+                    </div>
+                </div>
             </div>
-        </div>
-    </div>
-    <div class="col-lg-4 col-md-6">
-        <div class="kpi-card kpi-card-avg">
-            <div class="icon-wrapper"><i data-lucide="bar-chart-horizontal"></i></div>
-            <div>
-                <div class="kpi-value" id="kpi-avg-minutes">...</div>
-                <div class="kpi-label">平均每日时长 (分钟)</div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div class="row g-4">
-    <div class="col-lg-12 mb-4">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="card-title mb-0">学习时长分析</h5></div>
-            <div class="card-body">
-                <div class="chart-container-wrapper">
-                    <canvas id="durationChart"></canvas>
+            <div class="col-lg-6">
+                <div class="card h-100">
+                    <div class="card-header"><h5 class="card-title mb-0">学习效率分析</h5></div>
+                    <div class="card-body">
+                        <div class="chart-container-wrapper">
+                            <canvas id="efficiencyChart"></canvas>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <div class="col-lg-12">
-        <div class="card h-100">
-            <div class="card-header"><h5 class="card-title mb-0">学习效率分析</h5></div>
-            <div class="card-body">
-                <div class="chart-container-wrapper">
-                    <canvas id="efficiencyChart"></canvas>
+    <div class="tab-pane fade" id="category-pane" role="tabpanel">
+        <div class="row g-3">
+            <div class="col-lg-7">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center"><h5
+                            class="card-title mb-0" id="categoryChartTitle">分类时长占比</h5></div>
+                    <div class="card-body position-relative d-flex align-items-center justify-content-center"
+                         style="min-height: 500px;">
+                        <canvas id="categoryDoughnutChart"></canvas>
+                        <div id="doughnut-center-text" class="text-center position-absolute"
+                             style="pointer-events: none;"><h3 class="mb-0">...</h3><small
+                                class="text-muted">总时长</small></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-lg-5">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center"><h5
+                            class="card-title mb-0">分类时长排行</h5>
+                        <button id="backButton" class="btn btn-sm btn-outline-secondary" style="display: none;"><i
+                                data-lucide="arrow-left" style="width:16px; height:16px; margin-right: 4px;"></i>返回上级
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container-wrapper" style="height: 250px;">
+                            <canvas id="categoryBarChart"></canvas>
+                        </div>
+                        <hr>
+                        <div id="category-table-container" style="max-height: 180px; overflow-y: auto;"></div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -159,200 +218,355 @@
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    lucide.createIcons();
+    document.addEventListener('DOMContentLoaded', function () {
+        lucide.createIcons();
+        const trendsTabBtn = document.getElementById('trends-tab'),
+            categoryTabBtn = document.getElementById('category-tab'),
+            trendsControls = document.getElementById('trends-controls'),
+            categoryControls = document.getElementById('category-controls');
 
-    let dataStore = {};
-    let durationChart, efficiencyChart;
+        function updateControlVisibility() {
+            trendsTabBtn.classList.contains('active') ? (trendsControls.style.display = 'inline-block', categoryControls.style.display = 'none') : categoryTabBtn.classList.contains('active') && (trendsControls.style.display = 'none', categoryControls.style.display = 'inline-block')
+        }
 
-    const stageAnnotationsPlugin = {
-        id: 'stageAnnotations',
-        afterDraw: (chart) => {
-            if (chart.config.options.plugins.stageAnnotations.view !== 'weekly') {
+        trendsTabBtn.addEventListener('shown.bs.tab', updateControlVisibility);
+        categoryTabBtn.addEventListener('shown.bs.tab', updateControlVisibility);
+        updateControlVisibility();
+
+        (function () {
+            // Trend analysis logic remains unchanged and correct.
+            let dataStore = {}, durationChart, efficiencyChart;
+            const createChartOptions = t => ({
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: {mode: 'index', intersect: false},
+                layout: {padding: {bottom: 40}},
+                plugins: {
+                    legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
+                    tooltip: {
+                        backgroundColor: '#1f2937',
+                        titleFont: {size: 14},
+                        bodyFont: {size: 12},
+                        padding: 10,
+                        cornerRadius: 6,
+                        boxPadding: 3
+                    },
+                    stageAnnotations: {annotations: [], view: 'weekly'}
+                },
+                scales: {
+                    x: {grid: {display: false}, ticks: {display: false}},
+                    y: {title: {display: true, text: t}, grace: '5%', beginAtZero: true}
+                }
+            });
+            const stageAnnotationsPlugin = {
+                id: 'stageAnnotations', afterDraw: (chart) => {
+                    if (chart.config.options.plugins.stageAnnotations.view !== 'weekly') {
+                        return;
+                    }
+                    const {ctx, chartArea: {bottom, left, right}, scales: {x}} = chart;
+                    const annotations = chart.config.options.plugins.stageAnnotations.annotations;
+                    if (!annotations) {
+                        return;
+                    }
+                    ctx.save();
+                    ctx.font = 'bold 12px "Inter", sans-serif';
+                    ctx.textAlign = 'center';
+                    annotations.forEach(anno => {
+                        const startIndex = chart.data.labels.indexOf(anno.start_week_label);
+                        const endIndex = chart.data.labels.indexOf(anno.end_week_label);
+                        if (startIndex === -1 || endIndex === -1) {
+                            return;
+                        }
+                        const startPixel = x.getPixelForValue(startIndex);
+                        const endPixel = x.getPixelForValue(endIndex);
+                        const middlePixel = startPixel + (endPixel - startPixel) / 2;
+                        if (middlePixel < left || middlePixel > right) {
+                            return;
+                        }
+                        ctx.strokeStyle = '#9CA3AF';
+                        ctx.lineWidth = 1;
+                        ctx.fillStyle = '#4B5563';
+                        ctx.beginPath();
+                        ctx.moveTo(startPixel, bottom + 15);
+                        ctx.lineTo(endPixel, bottom + 15);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(middlePixel, bottom + 15);
+                        ctx.lineTo(middlePixel, bottom + 20);
+                        ctx.stroke();
+                        ctx.fillText(anno.name, middlePixel, bottom + 35);
+                    });
+                    ctx.restore();
+                }
+            };
+            const durationCtx = document.getElementById('durationChart')?.getContext('2d');
+            const efficiencyCtx = document.getElementById('efficiencyChart')?.getContext('2d');
+            if (!durationCtx || !efficiencyCtx) {
                 return;
             }
-            const {ctx, chartArea: {bottom, left, right}, scales: {x}} = chart;
-            const annotations = chart.config.options.plugins.stageAnnotations.annotations;
-            if (!annotations) return;
-
-            ctx.save();
-            ctx.font = 'bold 12px "Inter", sans-serif';
-            ctx.textAlign = 'center';
-
-            annotations.forEach(anno => {
-                const startIndex = chart.data.labels.indexOf(anno.start_week_label);
-                const endIndex = chart.data.labels.indexOf(anno.end_week_label);
-
-                if (startIndex === -1 || endIndex === -1) return;
-
-                const startPixel = x.getPixelForValue(startIndex);
-                const endPixel = x.getPixelForValue(endIndex);
-                const middlePixel = startPixel + (endPixel - startPixel) / 2;
-
-                if (middlePixel < left || middlePixel > right) return;
-
-                ctx.strokeStyle = '#9CA3AF';
-                ctx.lineWidth = 1;
-                ctx.fillStyle = '#4B5563';
-
-                ctx.beginPath();
-                ctx.moveTo(startPixel, bottom + 15);
-                ctx.lineTo(endPixel, bottom + 15);
-                ctx.stroke();
-
-                ctx.beginPath();
-                ctx.moveTo(middlePixel, bottom + 15);
-                ctx.lineTo(middlePixel, bottom + 20);
-                ctx.stroke();
-
-                ctx.fillText(anno.name, middlePixel, bottom + 35);
+            durationChart = new Chart(durationCtx, {
+                type: 'bar',
+                options: createChartOptions('学习时长 (小时)'),
+                plugins: [stageAnnotationsPlugin]
             });
-            ctx.restore();
-        }
-    };
+            efficiencyChart = new Chart(efficiencyCtx, {
+                type: 'bar',
+                options: createChartOptions('学习效率'),
+                plugins: [stageAnnotationsPlugin]
+            });
 
-    document.addEventListener('DOMContentLoaded', () => {
-        const durationCtx = document.getElementById('durationChart').getContext('2d');
-        const efficiencyCtx = document.getElementById('efficiencyChart').getContext('2d');
-        const weeklyBtn = document.getElementById('viewWeekly');
-        const dailyBtn = document.getElementById('viewDaily');
-
-        const createChartOptions = (yAxisTitle, yMin, yMax, yStep) => ({
-            responsive: true, maintainAspectRatio: false,
-            interaction: {mode: 'index', intersect: false},
-            layout: {padding: {bottom: 40}},
-            plugins: {
-                legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
-                tooltip: {
-                    backgroundColor: '#1f2937',
-                    titleFont: {size: 14},
-                    bodyFont: {size: 12},
-                    padding: 10,
-                    cornerRadius: 6,
-                    boxPadding: 3
-                },
-                stageAnnotations: {annotations: [], view: 'weekly'}
-            },
-            scales: {
-                x: {
-                    grid: {display: false},
-                    ticks: {display: false}
-                },
-                y: {
-                    title: {display: true, text: yAxisTitle},
-                    min: yMin,
-                    max: yMax,
-                    ticks: {stepSize: yStep},
-                    grace: '5%',
-                    beginAtZero: true // Ensure Y-axis always starts at 0
+            async function fetchDataAndRender() {
+                try {
+                    const response = await fetch("{{ url_for('charts.get_chart_data') }}");
+                    if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
+                    const data = await response.json();
+                    if (!data.has_data) {
+                        document.getElementById('trends-pane').innerHTML = '<div class="alert alert-info text-center">暂无学习数据，无法生成趋势图表。</div>';
+                        return;
+                    }
+                    dataStore = data;
+                    document.getElementById('kpi-avg-time').textContent = data.kpis.avg_daily_formatted || 'N/A';
+                    document.getElementById('kpi-efficiency-star').textContent = data.kpis.efficiency_star || 'N/A';
+                    document.getElementById('kpi-weekly-trend').textContent = data.kpis.weekly_trend || 'N/A';
+                    updateCharts('weekly');
+                } catch (error) {
+                    console.error('Error fetching trend data:', error);
+                    document.getElementById('trends-pane').innerHTML = '<div class="alert alert-danger">无法加载趋势图表数据，请稍后重试。</div>';
                 }
             }
-        });
 
-        durationChart = new Chart(durationCtx, {
-            type: 'bar',
-            options: createChartOptions('学习时长 (小时)'),
-            plugins: [stageAnnotationsPlugin]
-        });
-
-        // --- FIXED: Removed hardcoded scale (0, 5, 1) ---
-        efficiencyChart = new Chart(efficiencyCtx, {
-            type: 'bar',
-            options: createChartOptions('学习效率'), // Let Chart.js determine the scale automatically
-            plugins: [stageAnnotationsPlugin]
-        });
-
-        async function fetchDataAndRender() {
-            try {
-                const response = await fetch("/charts/api/data");
-                if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
-                const data = await response.json();
-
-                if (!data.kpis) {
-                    document.querySelector('.page-header').insertAdjacentHTML('afterend', '<div class="alert alert-info">暂无数据可供分析。</div>');
-                    return;
-                }
-
-                dataStore = {
-                    weekly: {duration: data.weekly_duration_data, efficiency: data.weekly_efficiency_data},
-                    daily: {duration: data.daily_duration_data, efficiency: data.daily_efficiency_data},
-                    annotations: data.stage_annotations
+            function updateCharts(view) {
+                if (!dataStore.has_data || !dataStore[`${view}_duration_data`]) return;
+                const durationData = dataStore[`${view}_duration_data`],
+                    efficiencyData = dataStore[`${view}_efficiency_data`];
+                durationChart.data = {
+                    labels: durationData.labels,
+                    datasets: [{
+                        type: 'bar',
+                        label: '实际时长',
+                        data: durationData.actuals,
+                        backgroundColor: 'rgba(96, 165, 250, 0.5)',
+                        order: 2
+                    }, {
+                        type: 'line',
+                        label: '趋势',
+                        data: durationData.trends,
+                        borderColor: '#2563EB',
+                        tension: .4,
+                        fill: false,
+                        pointRadius: 0,
+                        borderWidth: 2.5,
+                        order: 1
+                    }]
                 };
-
-                document.getElementById('kpi-total-hours').textContent = data.kpis.total_hours;
-                document.getElementById('kpi-total-days').textContent = data.kpis.total_days;
-                document.getElementById('kpi-avg-minutes').textContent = data.kpis.avg_daily_minutes;
-
-                updateCharts('weekly');
-            } catch (error) {
-                console.error('Error fetching chart data:', error);
-                document.querySelector('.page-header').insertAdjacentHTML('afterend', '<div class="alert alert-danger">无法加载图表数据，请稍后重试。</div>');
+                efficiencyChart.data = {
+                    labels: efficiencyData.labels,
+                    datasets: [{
+                        type: 'bar',
+                        label: '实际效率',
+                        data: efficiencyData.actuals,
+                        backgroundColor: 'rgba(248, 113, 113, 0.5)',
+                        order: 2
+                    }, {
+                        type: 'line',
+                        label: '趋势',
+                        data: efficiencyData.trends,
+                        borderColor: '#991B1B',
+                        tension: .4,
+                        fill: false,
+                        pointRadius: 0,
+                        borderWidth: 2.5,
+                        order: 1,
+                        spanGaps: true
+                    }]
+                };
+                durationChart.config.options.plugins.stageAnnotations = {
+                    annotations: dataStore.stage_annotations,
+                    view: view
+                };
+                efficiencyChart.config.options.plugins.stageAnnotations = {
+                    annotations: dataStore.stage_annotations,
+                    view: view
+                };
+                durationChart.update();
+                efficiencyChart.update();
             }
-        }
 
-        function updateCharts(view) {
-            if (!dataStore[view]) return;
+            document.querySelectorAll('#trends-controls .btn').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    document.querySelector('#trends-controls .btn.active').classList.remove('active');
+                    this.classList.add('active');
+                    updateCharts(this.dataset.view)
+                })
+            });
+            fetchDataAndRender();
+        })();
 
-            durationChart.data = {
-                labels: dataStore[view].duration.labels,
-                datasets: [{
-                    type: 'bar',
-                    label: '实际时长',
-                    data: dataStore[view].duration.actuals,
-                    backgroundColor: 'rgba(251, 146, 60, 0.5)',
-                    order: 2
-                }, {
-                    type: 'line',
-                    label: '趋势',
-                    data: dataStore[view].duration.trends,
-                    borderColor: '#B45309',
-                    tension: 0.4,
-                    fill: false,
-                    pointRadius: 0,
-                    borderWidth: 2.5,
-                    order: 1
-                }]
+        (function () {
+            // Category logic...
+            let doughnutChart, barChart, rawData, currentView = 'main', currentCategory = '';
+            const doughnutCtx = document.getElementById('categoryDoughnutChart'),
+                barCtx = document.getElementById('categoryBarChart');
+            if (!doughnutCtx || !barCtx) return;
+            const stageFilter = document.getElementById('stageFilter'),
+                backButton = document.getElementById('backButton'),
+                tableContainer = document.getElementById('category-table-container'),
+                chartTitle = document.getElementById('categoryChartTitle'),
+                doughnutCenterText = document.querySelector('#doughnut-center-text h3'),
+                chartColors = ['#60A5FA', '#F87171', '#FBBF24', '#4ADE80', '#A78BFA', '#2DD4BF', '#F472B6', '#818CF8', '#FB923C', '#34D399'];
+
+            // The plugin is NOT registered globally
+            // Chart.register(ChartDataLabels);
+
+            const createClickHandler = (chart) => (evt, elements) => {
+                if (elements.length > 0) {
+                    const index = elements[0].index;
+                    const label = chart.data.labels[index];
+                    if (currentView === 'main' && rawData.drilldown[label] && rawData.drilldown[label].labels.length > 0) {
+                        currentCategory = label;
+                        currentView = 'drilldown';
+                        updateAllCharts();
+                    }
+                }
             };
-            efficiencyChart.data = {
-                labels: dataStore[view].efficiency.labels,
-                datasets: [{
-                    type: 'bar',
-                    label: '实际效率',
-                    data: dataStore[view].efficiency.actuals,
-                    backgroundColor: 'rgba(248, 113, 113, 0.5)',
-                    order: 2
-                }, {
-                    type: 'line',
-                    label: '趋势',
-                    data: dataStore[view].efficiency.trends,
-                    borderColor: '#991B1B',
-                    tension: 0.4,
-                    fill: false,
-                    pointRadius: 0,
-                    borderWidth: 2.5,
-                    order: 1,
-                    spanGaps: true
-                }]
+            const createHoverHandler = (chart) => (evt, elements) => {
+                chart.canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                const highlightIndex = elements.length > 0 ? elements[0].index : null;
+                [doughnutChart, barChart].forEach(c => {
+                    const ds = c.data.datasets[0];
+                    if (ds) {
+                        ds.borderWidth = c.data.labels.map((_, i) => i === highlightIndex ? 3 : 1);
+                        ds.borderColor = c.data.labels.map((_, i) => i === highlightIndex ? '#333' : 'transparent');
+                        c.update('none');
+                    }
+                });
+                document.querySelectorAll('#category-table-container tr').forEach((tr, i) => {
+                    tr.classList.toggle('table-active', i === highlightIndex);
+                });
+            };
+            const doughnutOptions = {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {display: false},
+                    tooltip: {callbacks: {label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时 (${(c.parsed / c.chart.getDatasetMeta(0).total * 100).toFixed(1)}%)`}}
+                },
+                onClick: createClickHandler(doughnutChart),
+                onHover: createHoverHandler(doughnutChart)
             };
 
-            durationChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
-            efficiencyChart.config.options.plugins.stageAnnotations = {annotations: dataStore.annotations, view: view};
+            // THIS IS THE FIX: The 'datalabels' plugin configuration is completely removed.
+            const barOptions = {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {display: false},
+                    tooltip: {callbacks: {label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时`}}
+                },
+                scales: {x: {display: false, grid: {display: false}}, y: {grid: {display: false}}},
+                onClick: createClickHandler(barChart),
+                onHover: createHoverHandler(barChart)
+            };
 
-            durationChart.update();
-            efficiencyChart.update();
-        }
+            doughnutChart = new Chart(doughnutCtx, {type: 'doughnut', options: doughnutOptions});
+            barChart = new Chart(barCtx, {type: 'bar', options: barOptions});
 
-        weeklyBtn.addEventListener('click', () => {
-            updateCharts('weekly');
-            weeklyBtn.classList.add('active');
-            dailyBtn.classList.remove('active');
-        });
-        dailyBtn.addEventListener('click', () => {
-            updateCharts('daily');
-            dailyBtn.classList.add('active');
-            weeklyBtn.classList.remove('active');
-        });
+            async function fetchAndRenderAll() {
+                try {
+                    const stageId = stageFilter.value,
+                        response = await fetch(`/category_charts/api/data?stage_id=${stageId}`);
+                    if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
+                    rawData = await response.json(), currentView = 'main', currentCategory = '', updateAllCharts()
+                } catch (error) {
+                    console.error('Error fetching category data:', error), document.getElementById('category-pane').innerHTML = '<div class="alert alert-danger">无法加载分类图表数据。</div>'
+                }
+            }
 
-        fetchDataAndRender();
+            function updateAllCharts() {
+                let chartData, title;
+                if (currentView === 'drilldown') {
+                    chartData = rawData.drilldown[currentCategory];
+                    title = `${currentCategory} - 标签详情`;
+                    backButton.style.display = 'inline-block'
+                } else {
+                    chartData = rawData.main;
+                    title = '分类时长占比';
+                    backButton.style.display = 'none'
+                }
+                chartTitle.textContent = title;
+                if (chartData && chartData.labels.length > 0) {
+                    const sortedData = chartData.labels.map((label, i) => ({
+                        label: label,
+                        value: chartData.data[i]
+                    })).sort((a, b) => b.value - a.value);
+                    const labels = sortedData.map(d => d.label);
+                    const data = sortedData.map(d => d.value);
+                    const totalHours = data.reduce((a, b) => a + b, 0);
+                    doughnutChart.data = {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: chartColors,
+                            borderWidth: 1,
+                            borderColor: 'transparent'
+                        }]
+                    };
+                    barChart.data = {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: chartColors,
+                            borderWidth: 1,
+                            borderColor: 'transparent'
+                        }]
+                    };
+                    doughnutChart.update();
+                    barChart.update();
+                    doughnutCenterText.textContent = `${totalHours.toFixed(1)}h`;
+                    renderTable(sortedData, totalHours);
+                } else {
+                    document.getElementById('category-pane').innerHTML = '<div class="alert alert-info text-center">当前筛选范围内没有找到任何带分类的学习记录。</div>';
+                }
+            }
+
+            function renderTable(data, total) {
+                let tableHtml = '<table class="table table-hover category-data-table"><thead><tr><th>名称</th><th>时长(h)</th><th>占比(%)</th></tr></thead><tbody>';
+                data.forEach((item, index) => {
+                    const percentage = total > 0 ? (item.value / total * 100).toFixed(1) : 0;
+                    tableHtml += `<tr data-index="${index}" data-label="${item.label}"><td>${item.label}</td><td>${item.value.toFixed(1)}</td><td>${percentage}%</td></tr>`;
+                });
+                tableHtml += '</tbody></table>';
+                tableContainer.innerHTML = tableHtml;
+                tableContainer.querySelectorAll('tr').forEach(row => {
+                    row.addEventListener('click', () => {
+                        if (currentView === 'main') {
+                            const label = row.dataset.label;
+                            if (rawData.drilldown[label] && rawData.drilldown[label].labels.length > 0) {
+                                currentCategory = label;
+                                currentView = 'drilldown';
+                                updateAllCharts();
+                            }
+                        }
+                    });
+                    row.addEventListener('mouseenter', () => createHoverHandler(barChart)(null, [{index: parseInt(row.dataset.index)}]));
+                    row.addEventListener('mouseleave', () => createHoverHandler(barChart)(null, []));
+                });
+            }
+
+            stageFilter.addEventListener('change', fetchAndRenderAll);
+            backButton.addEventListener('click', () => {
+                currentView = 'main';
+                updateAllCharts()
+            });
+            let isCategoryTabLoaded = false;
+            categoryTabBtn.addEventListener('shown.bs.tab', function () {
+                if (!isCategoryTabLoaded) {
+                    fetchAndRenderAll(), isCategoryTabLoaded = true
+                }
+            });
+        })();
     });
 </script>
 {% endblock %}

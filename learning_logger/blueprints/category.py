@@ -1,7 +1,7 @@
 # learning_logger/blueprints/category.py
 
-from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, jsonify)
+from flask import (Blueprint, request, redirect, url_for,
+                   flash)
 from flask_login import login_required, current_user
 from .. import db
 from ..models import Category, SubCategory
@@ -9,12 +9,7 @@ from ..models import Category, SubCategory
 category_bp = Blueprint('category', __name__)
 
 
-@category_bp.route('/management')
-@login_required
-def management():
-    """显示分类管理页面。"""
-    categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
-    return render_template('category_management.html', categories=categories)
+# --- REMOVED: management() view function is no longer needed ---
 
 
 # --- 大分类 (Category) 操作 ---
@@ -30,7 +25,8 @@ def add_category():
         db.session.add(new_category)
         db.session.commit()
         flash(f'大分类 “{name}” 已成功添加！', 'success')
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')
 
 
 @category_bp.route('/category/edit/<int:category_id>', methods=['POST'])
@@ -44,7 +40,8 @@ def edit_category(category_id):
         category.name = name
         db.session.commit()
         flash('大分类已更新。', 'success')
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')
 
 
 @category_bp.route('/category/delete/<int:category_id>', methods=['POST'])
@@ -58,7 +55,8 @@ def delete_category(category_id):
         db.session.delete(category)
         db.session.commit()
         flash(f'大分类 “{category.name}” 已删除。', 'info')
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')
 
 
 # --- 小分类 (SubCategory) 操作 ---
@@ -81,7 +79,8 @@ def add_subcategory():
             db.session.add(new_subcategory)
             db.session.commit()
             flash(f'小分类 “{name}” 已成功添加到 “{parent_category.name}”！', 'success')
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')
 
 
 @category_bp.route('/subcategory/edit/<int:subcategory_id>', methods=['POST'])
@@ -108,7 +107,8 @@ def edit_subcategory(subcategory_id):
             db.session.commit()
             flash('小分类已更新。', 'success')
 
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')
 
 
 @category_bp.route('/subcategory/delete/<int:subcategory_id>', methods=['POST'])
@@ -126,4 +126,5 @@ def delete_subcategory(subcategory_id):
         db.session.commit()
         flash(f'小分类 “{subcategory.name}” 已删除。', 'info')
 
-    return redirect(url_for('category.management'))
+    # MODIFIED: Redirect to the settings page, category tab
+    return redirect(url_for('main.settings') + '#category-management')

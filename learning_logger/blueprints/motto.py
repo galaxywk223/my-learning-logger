@@ -1,7 +1,7 @@
-# learning_logger/blueprints/motto.py
+# learning_logger/blueprints/motto.py (REDIRECTS FIXED)
 
 import random
-from flask import (Blueprint, render_template, request, redirect, url_for,
+from flask import (Blueprint, request, redirect, url_for,
                    flash, jsonify)
 from flask_login import login_required, current_user
 
@@ -11,14 +11,6 @@ from ..models import Motto
 motto_bp = Blueprint('motto', __name__, url_prefix='/mottos')
 
 
-@motto_bp.route('/')
-@login_required
-def management():
-    """显示格言管理页面，列出所有用户的格言。"""
-    user_mottos = Motto.query.filter_by(user_id=current_user.id).order_by(Motto.id.desc()).all()
-    return render_template('motto_management.html', mottos=user_mottos)
-
-
 @motto_bp.route('/add', methods=['POST'])
 @login_required
 def add_motto():
@@ -26,13 +18,14 @@ def add_motto():
     content = request.form.get('content')
     if not content or not content.strip():
         flash('格言内容不能为空。', 'error')
-        return redirect(url_for('motto.management'))
+    else:
+        new_motto = Motto(content=content, user_id=current_user.id)
+        db.session.add(new_motto)
+        db.session.commit()
+        flash('新格言已成功添加！', 'success')
 
-    new_motto = Motto(content=content, user_id=current_user.id)
-    db.session.add(new_motto)
-    db.session.commit()
-    flash('新格言已成功添加！', 'success')
-    return redirect(url_for('motto.management'))
+    # 修复：重定向到新的内容管理页面
+    return redirect(url_for('main.settings_content') + '#headingMottos')
 
 
 @motto_bp.route('/edit/<int:motto_id>', methods=['POST'])
@@ -47,7 +40,9 @@ def edit_motto(motto_id):
         motto.content = content
         db.session.commit()
         flash('格言已更新。', 'success')
-    return redirect(url_for('motto.management'))
+
+    # 修复：重定向到新的内容管理页面
+    return redirect(url_for('main.settings_content') + '#headingMottos')
 
 
 @motto_bp.route('/delete/<int:motto_id>', methods=['POST'])
@@ -58,17 +53,17 @@ def delete_motto(motto_id):
     db.session.delete(motto)
     db.session.commit()
     flash('格言已删除。', 'info')
-    return redirect(url_for('motto.management'))
+
+    # 修复：重定向到新的内容管理页面
+    return redirect(url_for('main.settings_content') + '#headingMottos')
 
 
-# --- API Endpoint for Dashboard ---
 @motto_bp.route('/api/random')
 @login_required
 def get_random_motto():
-    """API端点，返回一个随机的格言。"""
+    """API端点，返回一个随机的格言。(此部分无改动)"""
     mottos = Motto.query.filter_by(user_id=current_user.id).all()
     if not mottos:
-        # 如果用户没有格言，可以返回一个默认的
         return jsonify({'content': '书山有路勤为径，学海无涯苦作舟。'})
 
     random_motto = random.choice(mottos)

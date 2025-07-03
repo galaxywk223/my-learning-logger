@@ -1,0 +1,90 @@
+{% extends "settings_layout.html" %}
+
+{% block settings_content %}
+
+<div class="vstack gap-4">
+    <div class="card settings-card">
+        <div class="card-header">
+            <i data-lucide="user-circle"></i>
+            <h5 class="card-title mb-0">个人资料</h5>
+        </div>
+        <div class="card-body">
+            <form> {#  未来可以添加 action 和 method 来实现功能  #}
+                <div class="mb-3 row">
+                    <label for="username" class="col-sm-3 col-form-label">用户名</label>
+                    <div class="col-sm-9">
+                        <input type="text" class="form-control" id="username" value="{{ current_user.username }}">
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="email" class="col-sm-3 col-form-label">邮箱</label>
+                    <div class="col-sm-9">
+                        <input type="email" class="form-control" id="email" value="{{ current_user.email }}" readonly disabled>
+                        <div class="form-text">邮箱地址不可修改。</div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-sm-9 offset-sm-3">
+                        <button type="submit" class="btn btn-primary" disabled>保存更改 (功能待开发)</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card settings-card">
+        <div class="card-header">
+            <i data-lucide="key-round"></i>
+            <h5 class="card-title mb-0">安全设置</h5>
+        </div>
+        <div class="card-body">
+            <form> {#  未来可以添加 action 和 method 来实现功能  #}
+                <div class="mb-3 row">
+                    <label for="current-password" class="col-sm-3 col-form-label">当前密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="current-password" placeholder="输入您当前的密码">
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="new-password" class="col-sm-3 col-form-label">新密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="new-password" placeholder="输入您的新密码">
+                    </div>
+                </div>
+                <div class="mb-3 row">
+                    <label for="confirm-password" class="col-sm-3 col-form-label">确认新密码</label>
+                    <div class="col-sm-9">
+                        <input type="password" class="form-control" id="confirm-password" placeholder="再次输入您的新密码">
+                    </div>
+                </div>
+                 <div class="row">
+                    <div class="col-sm-9 offset-sm-3">
+                        <button type="submit" class="btn btn-primary" disabled>修改密码 (功能待开发)</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card settings-card danger-zone">
+        <div class="card-header">
+            <i data-lucide="alert-triangle"></i>
+            <h5 class="card-title mb-0">危险区域</h5>
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h6 class="card-title">清空我的数据</h6>
+                    <p class="text-muted mb-0">此操作将永久删除您账户下的所有数据（包括学习记录、阶段、分类等），且无法撤销。</p>
+                </div>
+                <form method="POST" action="{{ url_for('main.clear_my_data') }}" class="ms-3">
+                    <button type="submit" class="btn btn-danger" onclick="return confirm('最后警告：您确定要永久删除您的所有个人数据吗？此操作无法恢复！')">
+                        <i data-lucide="trash-2" class="me-2"></i>立即清空
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}

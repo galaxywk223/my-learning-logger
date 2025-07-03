@@ -23,7 +23,7 @@
     <div class="col-12">
         <div class="card">
             <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="card-title mb-0" id="chartTitle">大分类时长占比</h5>
+                <h5 class="card-title mb-0" id="chartTitle">分类时长占比</h5>
                 <button id="backButton" class="btn btn-sm btn-outline-secondary" style="display: none;">
                     <i data-lucide="arrow-left" class="me-1" style="width:16px; height:16px;"></i>返回上一级
                 </button>
@@ -123,11 +123,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (currentView === 'drilldown') {
             chartData = rawData.drilldown[currentCategory];
-            title = `${currentCategory} - 小分类占比`;
+            title = `${currentCategory} - 标签占比`;
             backButton.style.display = 'inline-block';
         } else {
             chartData = rawData.main;
-            title = '大分类时长占比';
+            title = '分类时长占比';
             backButton.style.display = 'none';
         }
 

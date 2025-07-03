@@ -1,4 +1,4 @@
-# learning_logger/blueprints/records.py (Final Fix: Always return JSON)
+# learning_logger/blueprints/records.py
 
 from datetime import date
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -21,7 +21,6 @@ def _get_category_data_for_form():
     return all_categories, all_subcategories
 
 
-# --- Main view and form-getting routes are fine, no changes needed ---
 @records_bp.route('/')
 @login_required
 def list_records():
@@ -33,7 +32,7 @@ def list_records():
         if active_stage:
             session['active_stage_id'] = active_stage.id
         else:
-            flash('指定的阶段不存在。', 'error');
+            flash('指定的阶段不存在。', 'error')
             return redirect(url_for('records.list_records'))
     else:
         active_stage_id = session.get('active_stage_id')
@@ -44,8 +43,16 @@ def list_records():
     if not active_stage:
         flash('欢迎使用！请先创建一个新的学习阶段以开始记录。', 'info')
         return render_template('settings.html', user_stages=[])
+
     sort_order = request.args.get('sort', 'desc')
     structured_logs = record_service.get_structured_logs_for_stage(active_stage, sort_order)
+
+    # --- NEW: Augment day data with total duration for progress bar ---
+    for week in structured_logs:
+        for day in week['days']:
+            total_duration_for_day = sum(log.actual_duration for log in day['logs'] if log.actual_duration)
+            day['total_duration'] = total_duration_for_day
+
     return render_template('index.html', structured_logs=structured_logs, current_sort=sort_order,
                            all_stages=all_stages, active_stage=active_stage)
 
@@ -55,12 +62,16 @@ def list_records():
 def get_add_form():
     active_stage_id = session.get('active_stage_id')
     if not active_stage_id:
-        # This case is unlikely with AJAX, but good for safety
         return jsonify({'success': False, 'message': '请先选择一个有效的学习阶段。'})
+
+    # --- MODIFIED: Handle default_date from daily quick-add button ---
+    default_date_str = request.args.get('default_date')
+    default_date_obj = date.fromisoformat(default_date_str) if default_date_str else date.today()
 
     all_categories, all_subcategories = _get_category_data_for_form()
 
-    return render_template('_form_record.html', log=None, default_date=date.today(), action_url=url_for('records.add'),
+    return render_template('_form_record.html', log=None, default_date=default_date_obj,
+                           action_url=url_for('records.add'),
                            submit_button_text='添加记录', all_categories=all_categories,
                            all_subcategories=all_subcategories)
 
@@ -71,17 +82,13 @@ def get_edit_form(log_id):
     log = record_service.get_log_entry_for_user(log_id, current_user)
     if not log:
         return jsonify({'success': False, 'message': '记录不存在或无权访问。'})
-
     all_categories, all_subcategories = _get_category_data_for_form()
-
     return render_template('_form_record.html', log=log, default_date=log.log_date,
                            action_url=url_for('records.edit', log_id=log.id), submit_button_text='更新记录',
                            all_categories=all_categories, all_subcategories=all_subcategories)
 
 
-# ============================================================================
-# 数据操作 (MODIFIED to always return JSON)
-# ============================================================================
+# ... (add, edit, delete, import/export functions remain unchanged) ...
 
 @records_bp.route('/add', methods=['POST'])
 @login_required
@@ -119,7 +126,6 @@ def delete(log_id):
         return jsonify({'success': False, 'message': message}), 400
 
 
-# --- Import/Export routes (Unchanged) ---
 @records_bp.route('/export/json')
 @login_required
 def export_json():

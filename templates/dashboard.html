@@ -4,7 +4,6 @@
 
 {% block content %}
 <style>
-    /* 为仪表盘卡片添加增强的视觉样式 */
     .dashboard-card {
         text-decoration: none;
         color: inherit;
@@ -14,30 +13,42 @@
         border-radius: var(--border-radius-md);
         background-color: var(--color-card-bg);
         border: 1px solid #E5E7EB;
-        border-top-width: 4px; /* 为彩色上边框留出空间 */
-        overflow: hidden; /* 确保内容在圆角内 */
+        border-top-width: 4px;
+        overflow: hidden;
+        position: relative; /* Needed for the ::before pseudo-element */
     }
 
-    /* 根据卡片类型设置不同的上边框颜色 */
+    /* --- NEW: Border animation on hover --- */
+    .dashboard-card::before {
+        content: '';
+        position: absolute;
+        top: -2px; /* Position it over the border */
+        left: 0;
+        height: 4px;
+        width: 0;
+        background-color: var(--color-primary-dark);
+        transition: width 0.4s ease;
+    }
+    .dashboard-card:hover::before {
+        width: 100%;
+    }
+    .card-records:hover::before { background-color: var(--color-primary-dark); }
+    .card-charts:hover::before { background-color: var(--color-accent-dark); }
+    .card-countdown:hover::before { background-color: #3730A3; }
+    .card-todo:hover::before { background-color: #15803D; }
+
+
     .card-records { border-top-color: var(--color-primary); }
     .card-charts { border-top-color: var(--color-accent); }
-    .card-countdown { border-top-color: #4338CA; } /* 深靛蓝色 */
-    /* --- 新增：新卡片颜色 --- */
-    .card-todo { border-top-color: #22C55E; } /* 绿色 */
-    .card-motto { border-top-color: #6366F1; } /* 靛蓝色 */
-
+    .card-countdown { border-top-color: #4338CA; }
+    .card-todo { border-top-color: #22C55E; }
 
     .dashboard-card:hover {
         transform: translateY(-8px);
         box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
     }
+    .dashboard-card .card-body { padding: 2rem; text-align: center; }
 
-    .dashboard-card .card-body {
-        padding: 2rem;
-        text-align: center;
-    }
-
-    /* 图标容器样式 */
     .icon-container {
         width: 64px;
         height: 64px;
@@ -46,83 +57,45 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        background-color: var(--color-primary-light); /* 默认背景色 */
+        background-color: var(--color-primary-light);
+        transition: transform 0.3s ease; /* --- NEW: Transition for icon scaling --- */
+    }
+    .dashboard-card:hover .icon-container {
+        transform: scale(1.1); /* --- NEW: Scale icon on hover --- */
     }
 
-    .icon-container i, .icon-container svg { /* MODIFIED: Select both i and svg */
-        width: 32px;
-        height: 32px;
-        color: var(--color-primary-dark); /* 默认图标颜色 */
-    }
-
-    /* 为不同卡片设置不同的图标容器颜色 */
+    .icon-container i, .icon-container svg { width: 32px; height: 32px; color: var(--color-primary-dark); }
     .icon-container-records { background-color: var(--color-primary-light); }
     .icon-container-records i, .icon-container-records svg { color: var(--color-primary-dark); }
-
     .icon-container-charts { background-color: var(--color-accent-light); }
     .icon-container-charts i, .icon-container-charts svg { color: var(--color-accent-dark); }
-
-    .icon-container-countdown { background-color: #C7D2FE; } /* 浅靛蓝色 */
-    .icon-container-countdown i, .icon-container-countdown svg { color: #4338CA; } /* 深靛蓝色 */
-
-    /* --- 新增：新卡片图标颜色 --- */
+    .icon-container-countdown { background-color: #C7D2FE; }
+    .icon-container-countdown i, .icon-container-countdown svg { color: #4338CA; }
     .icon-container-todo { background-color: #DCFCE7; }
     .icon-container-todo i, .icon-container-todo svg { color: #16A34A; }
-    .icon-container-motto { background-color: #E0E7FF; }
-    .icon-container-motto i, .icon-container-motto svg { color: #4338CA; }
 
+    .card-title-custom { font-family: 'Poppins', sans-serif; font-size: 1.3rem; font-weight: 600; margin-bottom: 0.5rem; }
 
-    .card-title-custom {
-        font-family: 'Poppins', sans-serif;
-        font-size: 1.3rem;
-        font-weight: 600;
-        margin-bottom: 0.5rem;
-    }
-
-    .card-text-custom {
-        color: var(--color-text-medium);
-        font-size: 1rem;
-        line-height: 1.5;
-    }
-
-    /* --- 格言卡片样式 --- */
-    .motto-card {
-        background-color: rgba(255, 255, 255, 0.85);
-        backdrop-filter: blur(5px);
-        border: none;
-    }
-
-    #random-motto-content {
-        font-size: 1.2rem;
+    /* --- NEW: Style for summary text --- */
+    .card-summary {
+        font-size: 0.9rem;
         font-weight: 500;
-        font-style: italic;
-        color: #374151; /* gray-700 */
-        min-height: 28px; /* 防止刷新时文字跳动 */
+        color: var(--color-text-dark);
+        margin-top: 1rem;
+        padding-top: 1rem;
+        border-top: 1px solid #e5e7eb;
     }
 
-    #refresh-motto-btn {
-        padding: 0.25rem 0.5rem;
-        font-size: 0.8rem;
-    }
-
-    #refresh-motto-btn .refresh-icon { /* MODIFIED: Select icon by class */
-        width: 14px;
-        height: 14px;
-    }
-
-    /* 刷新按钮旋转动画 */
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-    .animate-spin {
-        animation: spin 1s linear infinite;
-    }
+    .motto-card { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(5px); border: none; }
+    #random-motto-content { font-size: 1.2rem; font-weight: 500; font-style: italic; color: #374151; min-height: 28px; }
+    #refresh-motto-btn { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
+    #refresh-motto-btn .refresh-icon { width: 14px; height: 14px; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+    .animate-spin { animation: spin 1s linear infinite; }
 </style>
 
 <div class="page-header text-center">
-    <h1>学习记录器</h1>
-    <p class="lead text-secondary">今天你做别人不愿意做的事，明天你就能做到别人做不到的事！</p>
+    <h2 class="text-light mb-3">{{ dashboard_data.greeting }}</h2>
 </div>
 
 <div class="row justify-content-center mb-4">
@@ -143,11 +116,9 @@
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('records.list_records') }}" class="dashboard-card card-records">
             <div class="card-body">
-                <div class="icon-container icon-container-records">
-                    <i data-lucide="notebook-pen"></i>
-                </div>
-                <h5 class="card-title-custom">学习记录表</h5>
-                <p class="card-text-custom">查看、添加和管理您的所有学习日志。</p>
+                <div class="icon-container icon-container-records"><i data-lucide="notebook-pen"></i></div>
+                <h5 class="card-title-custom">学习记录</h5>
+                <p class="card-summary">{{ dashboard_data.records_summary }}</p>
             </div>
         </a>
     </div>
@@ -155,11 +126,9 @@
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('charts.chart_page') }}" class="dashboard-card card-charts">
             <div class="card-body">
-                 <div class="icon-container icon-container-charts">
-                    <i data-lucide="line-chart"></i>
-                </div>
-                <h5 class="card-title-custom">效率趋势图</h5>
-                <p class="card-text-custom">通过图表可视化的学习效率变化。</p>
+                 <div class="icon-container icon-container-charts"><i data-lucide="bar-chart-3"></i></div>
+                <h5 class="card-title-custom">统计分析</h5>
+                <p class="card-summary">深入洞察您的学习模式</p>
             </div>
         </a>
     </div>
@@ -167,11 +136,9 @@
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('countdown.list_events') }}" class="dashboard-card card-countdown">
             <div class="card-body">
-                 <div class="icon-container icon-container-countdown">
-                    <i data-lucide="flag"></i>
-                </div>
-                <h5 class="card-title-custom">目标倒计时</h5>
-                <p class="card-text-custom">设置和追踪您的重要目标和截止日期。</p>
+                 <div class="icon-container icon-container-countdown"><i data-lucide="flag"></i></div>
+                <h5 class="card-title-custom">倒计时</h5>
+                <p class="card-summary">{{ dashboard_data.countdown_summary }}</p>
             </div>
         </a>
     </div>
@@ -179,23 +146,9 @@
     <div class="col-lg-4 col-md-6">
         <a href="{{ url_for('todo.list_todos') }}" class="dashboard-card card-todo">
             <div class="card-body">
-                <div class="icon-container icon-container-todo">
-                    <i data-lucide="check-square"></i>
-                </div>
+                <div class="icon-container icon-container-todo"><i data-lucide="check-square"></i></div>
                 <h5 class="card-title-custom">备忘录</h5>
-                <p class="card-text-custom">管理您的待办事项，保持专注。</p>
-            </div>
-        </a>
-    </div>
-
-    <div class="col-lg-4 col-md-6">
-        <a href="{{ url_for('motto.management') }}" class="dashboard-card card-motto">
-            <div class="card-body">
-                <div class="icon-container icon-container-motto">
-                    <i data-lucide="quote"></i>
-                </div>
-                <h5 class="card-title-custom">格言管理</h5>
-                <p class="card-text-custom">添加、编辑和管理您的专属格言。</p>
+                <p class="card-summary">{{ dashboard_data.todo_summary }}</p>
             </div>
         </a>
     </div>
@@ -206,18 +159,15 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- 格言加载逻辑 ---
+        // --- Motto loading logic (unchanged) ---
         const mottoElement = document.getElementById('random-motto-content');
         const refreshBtn = document.getElementById('refresh-motto-btn');
-
         const refreshIcon = refreshBtn.querySelector('.refresh-icon');
 
         async function fetchAndDisplayMotto() {
             if (!mottoElement || !refreshBtn || !refreshIcon) return;
-
             refreshIcon.classList.add('animate-spin');
             refreshBtn.disabled = true;
-
             try {
                 const response = await fetch("{{ url_for('motto.get_random_motto') }}");
                 if (!response.ok) throw new Error('Network response was not ok');
@@ -229,15 +179,10 @@
             } finally {
                 refreshIcon.classList.remove('animate-spin');
                 refreshBtn.disabled = false;
-                lucide.createIcons({
-                    nodes: [refreshBtn]
-                });
+                lucide.createIcons({ nodes: [refreshBtn] });
             }
         }
-
         refreshBtn.addEventListener('click', fetchAndDisplayMotto);
-
-        // 初始加载
         fetchAndDisplayMotto();
     });
 </script>

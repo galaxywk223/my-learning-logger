@@ -30,10 +30,10 @@
     </div>
     <div>
         <button class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addSubCategoryModal">
-            <i data-lucide="plus-circle" class="me-2"></i>添加小分类
+            <i data-lucide="plus-circle" class="me-2"></i>添加标签
         </button>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addCategoryModal">
-            <i data-lucide="plus-circle" class="me-2"></i>添加大分类
+            <i data-lucide="plus-circle" class="me-2"></i>添加分类
         </button>
     </div>
 </div>
@@ -46,7 +46,7 @@
                 <h5 class="mb-0 d-flex align-items-center"><i data-lucide="folder" class="me-2"></i>{{ category.name }}</h5>
                 <div class="action-buttons">
                     <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editCategoryModal-{{ category.id }}">编辑</button>
-                    <form action="{{ url_for('category.delete_category', category_id=category.id) }}" method="POST" onsubmit="return confirm('警告：确定要删除大分类 “{{ category.name }}” 吗？只有当它不包含任何小分类时才能删除。');">
+                    <form action="{{ url_for('category.delete_category', category_id=category.id) }}" method="POST" onsubmit="return confirm('警告：确定要删除分类 “{{ category.name }}” 吗？只有当它不包含任何标签时才能删除。');">
                         <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
                     </form>
                 </div>
@@ -59,7 +59,7 @@
                         <span>{{ sub.name }}</span>
                         <div class="action-buttons">
                             <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#editSubCategoryModal-{{ sub.id }}">编辑</button>
-                            <form action="{{ url_for('category.delete_subcategory', subcategory_id=sub.id) }}" method="POST" onsubmit="return confirm('确定要删除小分类 “{{ sub.name }}” 吗？只有当它未关联任何学习记录时才能删除。');">
+                            <form action="{{ url_for('category.delete_subcategory', subcategory_id=sub.id) }}" method="POST" onsubmit="return confirm('确定要删除标签 “{{ sub.name }}” 吗？只有当它未关联任何学习记录时才能删除。');">
                                 <button type="submit" class="btn btn-sm btn-outline-danger">删除</button>
                             </form>
                         </div>
@@ -67,7 +67,7 @@
                     {% endfor %}
                 </ul>
                 {% else %}
-                <p class="text-center text-muted">这个大分类下还没有小分类。</p>
+                <p class="text-center text-muted">这个分类下还没有标签。</p>
                 {% endif %}
             </div>
         </div>
@@ -78,11 +78,11 @@
             <div class="modal-content">
                 <form action="{{ url_for('category.edit_category', category_id=category.id) }}" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title">编辑大分类</h5>
+                        <h5 class="modal-title">编辑分类</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
-                        <label for="name-{{ category.id }}" class="form-label">大分类名称</label>
+                        <label for="name-{{ category.id }}" class="form-label">分类名称</label>
                         <input type="text" class="form-control" name="name" id="name-{{ category.id }}" value="{{ category.name }}" required>
                     </div>
                     <div class="modal-footer">
@@ -100,16 +100,16 @@
             <div class="modal-content">
                 <form action="{{ url_for('category.edit_subcategory', subcategory_id=sub.id) }}" method="POST">
                     <div class="modal-header">
-                        <h5 class="modal-title">编辑小分类</h5>
+                        <h5 class="modal-title">编辑标签</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                     </div>
                     <div class="modal-body">
                         <div class="mb-3">
-                            <label for="sub-name-{{ sub.id }}" class="form-label">小分类名称</label>
+                            <label for="sub-name-{{ sub.id }}" class="form-label">标签名称</label>
                             <input type="text" class="form-control" name="name" id="sub-name-{{ sub.id }}" value="{{ sub.name }}" required>
                         </div>
                         <div class="mb-3">
-                            <label for="parent-cat-{{ sub.id }}" class="form-label">所属大分类</label>
+                            <label for="parent-cat-{{ sub.id }}" class="form-label">所属分类</label>
                             <select class="form-select" name="category_id" id="parent-cat-{{ sub.id }}" required>
                                 {% for cat_option in categories %}
                                 <option value="{{ cat_option.id }}" {% if cat_option.id == sub.category_id %}selected{% endif %}>{{ cat_option.name }}</option>
@@ -142,11 +142,11 @@
         <div class="modal-content">
             <form action="{{ url_for('category.add_category') }}" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title">添加大分类</h5>
+                    <h5 class="modal-title">添加分类</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
-                    <label for="new-cat-name" class="form-label">大分类名称</label>
+                    <label for="new-cat-name" class="form-label">分类名称</label>
                     <input type="text" class="form-control" name="name" id="new-cat-name" placeholder="例如：课程、科研..." required>
                 </div>
                 <div class="modal-footer">
@@ -163,18 +163,18 @@
         <div class="modal-content">
             <form action="{{ url_for('category.add_subcategory') }}" method="POST">
                 <div class="modal-header">
-                    <h5 class="modal-title">添加小分类</h5>
+                    <h5 class="modal-title">添加标签</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body">
                      <div class="mb-3">
-                        <label for="new-sub-name" class="form-label">小分类名称</label>
+                        <label for="new-sub-name" class="form-label">标签名称</label>
                         <input type="text" class="form-control" name="name" id="new-sub-name" placeholder="例如：Web编程技术..." required>
                     </div>
                     <div class="mb-3">
-                        <label for="new-sub-parent" class="form-label">所属大分类</label>
+                        <label for="new-sub-parent" class="form-label">所属分类</label>
                         <select class="form-select" name="category_id" id="new-sub-parent" required>
-                            <option value="" disabled selected>请选择一个大分类...</option>
+                            <option value="" disabled selected>请选择一个分类...</option>
                             {% for category in categories %}
                             <option value="{{ category.id }}">{{ category.name }}</option>
                             {% endfor %}
