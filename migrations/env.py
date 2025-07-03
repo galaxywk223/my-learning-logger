@@ -32,9 +32,6 @@ config = context.config
 # 将数据库 URL 设置到 Alembic 的配置中
 config.set_main_option('sqlalchemy.url', db_url)
 
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
-
 # 将您的模型元数据设置为 Alembic 的目标
 target_metadata = db.metadata
 

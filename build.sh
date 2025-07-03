@@ -5,6 +5,5 @@ set -o errexit
 # Install Python dependencies
 pip install -r requirements.txt
 
-# 使用最标准的 Flask 命令来更新数据库。
-# 它会自动在项目根目录寻找 alembic.ini 文件。
-flask db upgrade
+# 使用-c标志明确指定alembic.ini的路径，并执行迁移
+alembic -c migrations/alembic.ini upgrade head
