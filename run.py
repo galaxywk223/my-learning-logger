@@ -1,31 +1,33 @@
-# run.py (最终健壮版)
+# run.py (Final version for robust deployment)
 
 import os
 from dotenv import load_dotenv
-from learning_logger import create_app, db
+from learning_logger import create_app
 
-# 明确地构建 .env 文件的绝对路径
-# 这可以确保无论从哪里运行脚本，都能正确找到 .env 文件
+# --- MODIFICATION START ---
+# This section is now smarter about detecting the environment.
+
+# Load .env file only if it exists (for local development)
 basedir = os.path.abspath(os.path.dirname(__file__))
 dotenv_path = os.path.join(basedir, '.env')
+if os.path.exists(dotenv_path):
+    load_dotenv(dotenv_path=dotenv_path)
 
-# 加载指定路径的 .env 文件
-load_dotenv(dotenv_path=dotenv_path)
+# If running on Render, always use the 'production' config.
+# Render automatically sets the 'RENDER' environment variable.
+if os.environ.get('RENDER'):
+    config_name = 'production'
+else:
+    # For local execution, fall back to FLASK_ENV or 'default'.
+    config_name = os.environ.get('FLASK_ENV', 'default')
 
-
-# 现在 os.environ.get() 可以读取到 .env 文件中设置的变量了
-# 我们在 .env 文件中设置了 FLASK_ENV=development
-# 如果 .env 不存在或未设置，则默认为 'default'
-config_name = os.environ.get('FLASK_ENV', 'default')
 app = create_app(config_name)
 
-
-# 这段代码将在每次应用启动时运行，确保数据库表已创建
-# db.create_all() 是一个“幂等”操作，只会创建尚不存在的表
-with app.app_context():
-    db.create_all()
+# The `db.create_all()` call has been removed.
+# Database schema is now managed exclusively by Flask-Migrate.
+# --- MODIFICATION END ---
 
 
 if __name__ == '__main__':
-    # 这个代码块只在本地直接运行 `python run.py` 时用于测试
+    # This block is for local testing via `python run.py`
     app.run(host='0.0.0.0')
