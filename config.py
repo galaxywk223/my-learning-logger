@@ -1,4 +1,4 @@
-# config.py (清理后最终版)
+# config.py (Final fix for production environment variable loading)
 
 import os
 
@@ -8,9 +8,8 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Config:
     """
-    基础配置类，只定义配置的名称，不包含任何硬编码的值。
+    基础配置类。
     """
-    # 如果在 .env 中未设置 SECRET_KEY，这里会是 None，Flask会报错，这是期望的行为。
     SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = False
@@ -18,6 +17,7 @@ class Config:
 
     @staticmethod
     def init_app(app):
+        # This method can be used for app-specific initialization
         pass
 
 
@@ -26,14 +26,13 @@ class DevelopmentConfig(Config):
     开发环境配置。
     """
     DEBUG = True
-    # 完全依赖 .env 文件来提供数据库URI
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
+                              'sqlite:///' + os.path.join(basedir, 'app-dev.db')
 
 
 class TestingConfig(Config):
     """
     测试环境配置。
-    测试配置保持独立，不依赖 .env 文件。
     """
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
@@ -45,13 +44,21 @@ class ProductionConfig(Config):
     """
     生产环境配置。
     """
-    DEBUG = False
-    MATPLOTLIB_BACKEND = 'Agg'
-    # 完全依赖环境变量 (例如由 Render, Heroku 提供)
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')
+    # We will set the URI in init_app to ensure os.environ is populated.
+    SQLALCHEMY_DATABASE_URI = None
 
-    if SQLALCHEMY_DATABASE_URI and SQLALCHEMY_DATABASE_URI.startswith("postgres://"):
-        SQLALCHEMY_DATABASE_URI = SQLALCHEMY_DATABASE_URI.replace("postgres://", "postgresql://", 1)
+    @staticmethod
+    def init_app(app):
+        # --- FIX START: Move the logic here ---
+        # This code now runs when the app is being created,
+        # ensuring Render's environment variables are available.
+        db_url = os.environ.get('DATABASE_URL')
+        if db_url and db_url.startswith("postgres://"):
+            db_url = db_url.replace("postgres://", "postgresql://", 1)
+
+        # Set the configuration on the app object
+        app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+        # --- FIX END ---
 
 
 # 将配置类组织在一个字典中，方便根据环境变量选择
