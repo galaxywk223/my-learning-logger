@@ -2,8 +2,9 @@
 # Exit on error
 set -o errexit
 
-# Install Python dependencies
+# 1. 安装所有依赖包
 pip install -r requirements.txt
 
-# 使用-c标志明确指定alembic.ini的路径，并执行迁移
-alembic -c migrations/alembic.ini upgrade head
+# 2. 使用 Flask-Migrate 的标准命令来运行数据库迁移
+# 这能确保迁移在与您的线上应用完全相同的配置和环境下运行
+flask db upgrade
