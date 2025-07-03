@@ -2,14 +2,10 @@
 # Exit on error
 set -o errexit
 
-# Install dependencies
+# Install Python dependencies
 pip install -r requirements.txt
 
-# NEW STEP: Create all tables directly from the models.
-# This ensures the database schema exists before migrations are applied.
-# The 'init-db' command is defined in your learning_logger/__init__.py file.
-flask init-db
-
-# Run database migrations to bring the schema to the latest version.
-# This will now run on top of the existing tables, ensuring everything is up-to-date.
+# Run database migrations. This is the single source of truth for the database schema.
+# On a new, empty database, it will create all tables from scratch and apply
+# all subsequent migrations to bring it to the latest version.
 flask db upgrade
