@@ -19,8 +19,16 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
 
 class ProductionConfig(Config):
-    # Directly get the DATABASE_URL. The replacement logic is now more robust.
+    """
+    生产环境配置。
+    """
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace("postgres://", "postgresql://", 1)
+
+    @staticmethod
+    def init_app(app):
+        # 这个方法必须存在以供 create_app 调用，
+        # 但我们已将配置逻辑移到类级别，所以这里什么都不用做。
+        pass
 
 config = {
     'development': DevelopmentConfig,
