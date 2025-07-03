@@ -5,6 +5,6 @@ set -o errexit
 # Install Python dependencies
 pip install -r requirements.txt
 
-# 直接使用 alembic 命令更新数据库到最新版本
-# 这比 'flask db upgrade' 更直接、更稳定
-alembic upgrade head
+# 使用 -c 标志明确指定 alembic.ini 的路径
+# 这是解决 "No 'script_location' key found" 问题的最终方法
+alembic -c migrations/alembic.ini upgrade head
