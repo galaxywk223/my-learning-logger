@@ -7,6 +7,12 @@ class Config:
     WTF_CSRF_ENABLED = False
     MATPLOTLIB_BACKEND = 'Agg'
 
+    @staticmethod
+    def init_app(app):
+        # This method is called by create_app, so it must exist.
+        # We can leave it empty if no special initialization is needed.
+        pass
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
