@@ -1,4 +1,4 @@
-# learning_logger/blueprints/main.py (FIXED DATETIME AWARENESS)
+# learning_logger/blueprints/main.py (FINAL FIX for SQLAlchemy delete restrictions)
 
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, current_app, session)
@@ -8,7 +8,7 @@ import pytz
 from sqlalchemy import func
 
 from .. import db
-from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData, Motto, Todo, Category
+from ..models import Stage, Setting, CountdownEvent, LogEntry, DailyData, WeeklyData, Motto, Todo, Category, SubCategory
 
 main_bp = Blueprint('main', __name__)
 
@@ -16,8 +16,7 @@ main_bp = Blueprint('main', __name__)
 @main_bp.route('/')
 @login_required
 def index():
-    """【已修复】仪表盘现在可以正确处理时区。"""
-
+    # This function remains correct.
     try:
         tz = pytz.timezone('Asia/Shanghai')
         current_hour = datetime.now(tz).hour
@@ -48,7 +47,6 @@ def index():
         else:
             dashboard_data['records_summary'] = f"今日已记录 {minutes} 分钟"
 
-    # --- 修复开始 ---
     now_utc = datetime.now(pytz.utc)
     next_event = CountdownEvent.query.filter(
         CountdownEvent.user_id == current_user.id,
@@ -56,7 +54,6 @@ def index():
     ).order_by(CountdownEvent.target_datetime_utc.asc()).first()
 
     if next_event:
-        # 确保从数据库取出的时间是 "aware" 的
         if next_event.target_datetime_utc.tzinfo is None:
             next_event.target_datetime_utc = pytz.utc.localize(next_event.target_datetime_utc)
 
@@ -64,7 +61,6 @@ def index():
         days_remaining = time_diff.days
         if days_remaining >= 0:
             dashboard_data['countdown_summary'] = f"'{next_event.title}' 还剩 {days_remaining + 1} 天"
-    # --- 修复结束 ---
 
     pending_todos_count = Todo.query.filter_by(user_id=current_user.id, is_completed=False).count()
     if pending_todos_count > 0:
@@ -74,7 +70,7 @@ def index():
 
 
 # ============================================================================
-# SETTINGS PAGE ROUTES (No changes below this line)
+# SETTINGS PAGE ROUTES
 # ============================================================================
 
 @main_bp.route('/settings')
@@ -175,19 +171,34 @@ def apply_stage(stage_id):
 @login_required
 def clear_my_data():
     try:
+        # --- FINAL FIX: Delete associated data first without using joins ---
         user_stages = Stage.query.filter_by(user_id=current_user.id).all()
         stage_ids = [s.id for s in user_stages]
+
+        user_categories = Category.query.filter_by(user_id=current_user.id).all()
+        category_ids = [c.id for c in user_categories]
+
+        # Delete child objects based on collected IDs
         if stage_ids:
             LogEntry.query.filter(LogEntry.stage_id.in_(stage_ids)).delete(synchronize_session=False)
             DailyData.query.filter(DailyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
             WeeklyData.query.filter(WeeklyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
+
+        if category_ids:
+            SubCategory.query.filter(SubCategory.category_id.in_(category_ids)).delete(synchronize_session=False)
+
+        # Delete other user-specific data
         Motto.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         Todo.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         CountdownEvent.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
         Setting.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        if user_stages:
-            for stage in user_stages:
-                db.session.delete(stage)
+
+        # Now delete the parent objects (Categories and Stages)
+        for category in user_categories:
+            db.session.delete(category)
+        for stage in user_stages:
+            db.session.delete(stage)
+
         db.session.commit()
         flash('您的所有个人数据已被成功清空！', 'success')
     except Exception as e:

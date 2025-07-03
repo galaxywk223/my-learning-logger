@@ -1,34 +1,50 @@
 {% extends "settings_layout.html" %}
 
 {% block settings_content %}
-<div class="card settings-card">
-    <div class="card-header">
-        <i data-lucide="database-zap"></i>
-        <h5 class="card-title mb-0">数据管理</h5>
-    </div>
-    <div class="card-body">
-        <div class="row">
-            <div class="col-lg-6">
-                <h6>数据导出</h6>
-                <p class="text-muted">将您的所有学习记录、阶段、分类和设置备份到一个 .json 文件中。这是一个很好的习惯，可以防止数据丢失。</p>
-                <a href="{{ url_for('records.export_json') }}" class="btn btn-secondary">
-                    <i data-lucide="download" class="me-2"></i>
-                    <span>导出我的全部数据</span>
-                </a>
+<div class="row g-4">
+    {# --- EXPORT CARD (Safe Action) --- #}
+    <div class="col-lg-6 d-flex flex-column">
+        <div class="card settings-card h-100">
+            <div class="card-header">
+                <i data-lucide="download-cloud"></i>
+                <h5 class="card-title mb-0">数据导出</h5>
             </div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted">
+                    将您的所有学习记录、阶段、分类和设置备份到一个 .json 文件中。这是一个很好的习惯，可以防止数据丢失。
+                </p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('records.export_json') }}" class="btn btn-secondary w-100">
+                        <i data-lucide="download" class="me-2"></i>
+                        <span>导出我的全部数据</span>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            <div class="col-lg-6">
-                <h6>数据导入</h6>
-                <p class="text-muted">从之前导出的 .json 文件中恢复您的数据。请注意：此操作将<strong class="text-danger">完全覆盖</strong>您当前的所有数据！</p>
-                <form method="POST" action="{{ url_for('records.import_json') }}" enctype="multipart/form-data">
+    {# --- IMPORT CARD (Dangerous Action) --- #}
+    <div class="col-lg-6 d-flex flex-column">
+        <div class="card settings-card danger-zone h-100">
+            <div class="card-header">
+                <i data-lucide="upload-cloud"></i>
+                <h5 class="card-title mb-0">数据导入</h5>
+            </div>
+            <div class="card-body d-flex flex-column">
+                <p class="text-muted">
+                    从之前导出的 .json 文件中恢复您的数据。请注意：此操作将<strong class="text-danger">完全覆盖</strong>您当前的所有数据！
+                </p>
+                <form method="POST" action="{{ url_for('records.import_json') }}" enctype="multipart/form-data" class="d-flex flex-column flex-grow-1">
                     <div class="mb-3">
                         <label for="importFile" class="form-label">选择 .json 备份文件</label>
                         <input class="form-control" type="file" id="importFile" name="file" accept=".json" required>
                     </div>
-                    <button type="submit" class="btn btn-info" onclick="return confirm('警告：此操作将覆盖您当前的所有数据，且无法撤销！确定要继续吗？')">
-                        <i data-lucide="upload" class="me-2"></i>
-                        <span>导入并覆盖</span>
-                    </button>
+                    <div class="mt-auto">
+                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('警告：此操作将覆盖您当前的所有数据，且无法撤销！确定要继续吗？')">
+                            <i data-lucide="upload" class="me-2"></i>
+                            <span>导入并覆盖</span>
+                        </button>
+                    </div>
                 </form>
             </div>
         </div>

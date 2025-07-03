@@ -42,12 +42,12 @@ def list_records():
             session['active_stage_id'] = active_stage.id
     if not active_stage:
         flash('欢迎使用！请先创建一个新的学习阶段以开始记录。', 'info')
-        return render_template('settings.html', user_stages=[])
+        # BUG FIX: Redirect to the correct settings page if no stage exists
+        return redirect(url_for('main.settings_content'))
 
     sort_order = request.args.get('sort', 'desc')
     structured_logs = record_service.get_structured_logs_for_stage(active_stage, sort_order)
 
-    # --- NEW: Augment day data with total duration for progress bar ---
     for week in structured_logs:
         for day in week['days']:
             total_duration_for_day = sum(log.actual_duration for log in day['logs'] if log.actual_duration)
@@ -64,7 +64,6 @@ def get_add_form():
     if not active_stage_id:
         return jsonify({'success': False, 'message': '请先选择一个有效的学习阶段。'})
 
-    # --- MODIFIED: Handle default_date from daily quick-add button ---
     default_date_str = request.args.get('default_date')
     default_date_obj = date.fromisoformat(default_date_str) if default_date_str else date.today()
 
@@ -87,8 +86,6 @@ def get_edit_form(log_id):
                            action_url=url_for('records.edit', log_id=log.id), submit_button_text='更新记录',
                            all_categories=all_categories, all_subcategories=all_subcategories)
 
-
-# ... (add, edit, delete, import/export functions remain unchanged) ...
 
 @records_bp.route('/add', methods=['POST'])
 @login_required
@@ -141,7 +138,8 @@ def import_json():
     file = request.files.get('file')
     if not file or not file.filename.endswith('.json'):
         flash('请选择一个有效的 .json 备份文件。', 'error')
-        return redirect(url_for('main.settings'))
+        # BUG FIX: Redirect to the correct data settings page
+        return redirect(url_for('main.settings_data'))
 
     success, message = data_service.import_data_for_user(current_user, file.stream)
 
@@ -156,4 +154,5 @@ def import_json():
     else:
         current_app.logger.error(f"Import failed for user {current_user.id}: {message}")
         flash(message, 'error')
-        return redirect(url_for('main.settings'))
+        # BUG FIX: Redirect to the correct data settings page
+        return redirect(url_for('main.settings_data'))

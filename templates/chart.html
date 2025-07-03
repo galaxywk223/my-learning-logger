@@ -81,51 +81,142 @@
         position: relative;
     }
 
+    /* --- UNIFIED CONTROL BAR STYLES --- */
+    .controls-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .control-group {
+        display: flex;
+        align-items: center;
+        background-color: rgba(0, 0, 0, 0.2);
+        border-radius: var(--border-radius-md);
+        padding: 4px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+    }
+
+    .control-group .btn, .control-group .form-select {
+        background-color: transparent;
+        border: none;
+        color: #e0e0e0;
+        font-size: 0.9rem;
+        font-weight: 500;
+        padding: 0.4rem 0.8rem;
+        border-radius: var(--border-radius-sm);
+        transition: all 0.2s ease-in-out;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        white-space: nowrap;
+    }
+
+    .control-group .btn.export-btn {
+        color: #a7f3d0; /* A light green to hint at its function */
+    }
+
+    .control-group .btn:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+        color: #fff;
+    }
+
+    .control-group .btn.export-btn:hover {
+        background-color: #15803d; /* Match the hover from dashboard */
+        color: #fff;
+    }
+
+    .control-group .btn.active {
+        background-color: var(--color-primary);
+        color: white;
+        box-shadow: 0 2px 8px rgba(167, 139, 250, 0.3);
+    }
+
+    .control-group .form-select {
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23e0e0e0' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+        background-repeat: no-repeat;
+        background-position: right 0.75rem center;
+        background-size: 16px 12px;
+        padding-right: 2.5rem;
+    }
+
+    .control-group .form-select:hover {
+        background-color: rgba(255, 255, 255, 0.1);
+    }
+
+    .controls-separator {
+        width: 1px;
+        height: 20px;
+        background-color: rgba(255, 255, 255, 0.2);
+    }
+
     #dynamic-controls .controls-container {
+        transition: opacity 0.3s ease, transform 0.3s ease;
+        opacity: 0;
+        transform: translateX(-10px);
         display: none;
     }
+
+    #dynamic-controls .controls-container.visible {
+        opacity: 1;
+        transform: translateX(0);
+        display: flex;
+    }
+
+    /* Style for table hover */
+    #category-table-container .table-hover tbody tr:hover {
+        cursor: pointer;
+    }
+
+
 </style>
 
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div><h1>统计分析</h1>
         <p class="lead text-secondary mb-0">通过数据洞察学习模式。</p></div>
-    <div class="d-flex align-items-center gap-3">
-        <a href="{{ url_for('charts.export_charts') }}" class="btn btn-success d-flex align-items-center gap-2">
-            <i data-lucide="download"></i>
-            <span>导出全部图表</span>
-        </a>
 
-        <ul class="nav nav-pills" id="chartsTab" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends-pane"
-                        type="button"><i data-lucide="line-chart" class="me-2"></i>趋势分析
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-pane"
-                        type="button"><i data-lucide="pie-chart" class="me-2"></i>分类占比
-                </button>
-            </li>
-        </ul>
-        <div id="dynamic-controls" class="ms-3">
-            <div id="trends-controls" class="controls-container">
-                <div class="btn-group btn-group-sm">
-                    <button type="button" class="btn btn-outline-primary active" data-view="weekly">周视图</button>
-                    <button type="button" class="btn btn-outline-primary" data-view="daily">日视图</button>
-                </div>
+    <div class="controls-toolbar">
+        <div class="control-group">
+            <a href="{{ url_for('charts.export_charts') }}" class="btn export-btn">
+                <i data-lucide="download"></i>
+                <span>导出全部图表</span>
+            </a>
+        </div>
+
+        <div class="control-group" id="chartsTab" role="tablist">
+            <button class="btn active" id="trends-tab" data-bs-toggle="tab" data-bs-target="#trends-pane" type="button" role="tab" aria-controls="trends-pane" aria-selected="true">
+                <i data-lucide="line-chart"></i>趋势分析
+            </button>
+            <button class="btn" id="category-tab" data-bs-toggle="tab" data-bs-target="#category-pane" type="button" role="tab" aria-controls="category-pane" aria-selected="false">
+                <i data-lucide="pie-chart"></i>分类占比
+            </button>
+        </div>
+
+        <div class="controls-separator"></div>
+
+        <div id="dynamic-controls" class="control-group">
+            <div id="trends-controls" class="controls-container visible">
+                <button type="button" class="btn active" data-view="weekly">周视图</button>
+                <button type="button" class="btn" data-view="daily">日视图</button>
             </div>
-            <div id="category-controls" class="controls-container"><select id="stageFilter"
-                                                                           class="form-select form-select-sm">
-                <option value="all" selected>全部历史</option>
-                {% for stage in stages %}
-                <option value="{{ stage.id }}">{{ stage.name }}</option>
-                {% endfor %}</select></div>
+            <div id="category-controls" class="controls-container">
+                <select id="stageFilter" class="form-select">
+                    <option value="all" selected>全部历史</option>
+                    {% for stage in stages %}
+                    <option value="{{ stage.id }}">{{ stage.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
     </div>
-</div>
+    </div>
 
 <div class="tab-content pt-3" id="chartsTabContent">
-    <div class="tab-pane fade show active" id="trends-pane" role="tabpanel">
+    <div class="tab-pane fade show active" id="trends-pane" role="tabpanel" aria-labelledby="trends-tab">
         <div class="row g-4 mb-4">
             <div class="col-lg-4 col-md-6">
                 <div class="kpi-card kpi-card-avg">
@@ -178,7 +269,7 @@
             </div>
         </div>
     </div>
-    <div class="tab-pane fade" id="category-pane" role="tabpanel">
+    <div class="tab-pane fade" id="category-pane" role="tabpanel" aria-labelledby="category-tab">
         <div class="row g-3">
             <div class="col-lg-7">
                 <div class="card h-100">
@@ -220,194 +311,55 @@
 <script>
     document.addEventListener('DOMContentLoaded', function () {
         lucide.createIcons();
-        const trendsTabBtn = document.getElementById('trends-tab'),
-            categoryTabBtn = document.getElementById('category-tab'),
-            trendsControls = document.getElementById('trends-controls'),
-            categoryControls = document.getElementById('category-controls');
 
-        function updateControlVisibility() {
-            trendsTabBtn.classList.contains('active') ? (trendsControls.style.display = 'inline-block', categoryControls.style.display = 'none') : categoryTabBtn.classList.contains('active') && (trendsControls.style.display = 'none', categoryControls.style.display = 'inline-block')
-        }
+        const mainTabs = document.querySelectorAll('#chartsTab button[data-bs-toggle="tab"]');
+        const trendsControls = document.getElementById('trends-controls');
+        const categoryControls = document.getElementById('category-controls');
 
-        trendsTabBtn.addEventListener('shown.bs.tab', updateControlVisibility);
-        categoryTabBtn.addEventListener('shown.bs.tab', updateControlVisibility);
-        updateControlVisibility();
+        mainTabs.forEach(tab => {
+            tab.addEventListener('shown.bs.tab', event => {
+                if (event.target.id === 'trends-tab') {
+                    categoryControls.classList.remove('visible');
+                    setTimeout(() => {
+                        categoryControls.style.display = 'none';
+                        trendsControls.style.display = 'flex';
+                        requestAnimationFrame(() => trendsControls.classList.add('visible'));
+                    }, 150);
+                } else {
+                    trendsControls.classList.remove('visible');
+                    setTimeout(() => {
+                        trendsControls.style.display = 'none';
+                        categoryControls.style.display = 'flex';
+                        requestAnimationFrame(() => categoryControls.classList.add('visible'));
+                    }, 150);
+                }
+            });
+        });
+
 
         (function () {
-            // Trend analysis logic remains unchanged and correct.
+            // Trend analysis logic remains unchanged.
             let dataStore = {}, durationChart, efficiencyChart;
-            const createChartOptions = t => ({
-                responsive: true,
-                maintainAspectRatio: false,
-                interaction: {mode: 'index', intersect: false},
-                layout: {padding: {bottom: 40}},
-                plugins: {
-                    legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}},
-                    tooltip: {
-                        backgroundColor: '#1f2937',
-                        titleFont: {size: 14},
-                        bodyFont: {size: 12},
-                        padding: 10,
-                        cornerRadius: 6,
-                        boxPadding: 3
-                    },
-                    stageAnnotations: {annotations: [], view: 'weekly'}
-                },
-                scales: {
-                    x: {grid: {display: false}, ticks: {display: false}},
-                    y: {title: {display: true, text: t}, grace: '5%', beginAtZero: true}
-                }
-            });
-            const stageAnnotationsPlugin = {
-                id: 'stageAnnotations', afterDraw: (chart) => {
-                    if (chart.config.options.plugins.stageAnnotations.view !== 'weekly') {
-                        return;
-                    }
-                    const {ctx, chartArea: {bottom, left, right}, scales: {x}} = chart;
-                    const annotations = chart.config.options.plugins.stageAnnotations.annotations;
-                    if (!annotations) {
-                        return;
-                    }
-                    ctx.save();
-                    ctx.font = 'bold 12px "Inter", sans-serif';
-                    ctx.textAlign = 'center';
-                    annotations.forEach(anno => {
-                        const startIndex = chart.data.labels.indexOf(anno.start_week_label);
-                        const endIndex = chart.data.labels.indexOf(anno.end_week_label);
-                        if (startIndex === -1 || endIndex === -1) {
-                            return;
-                        }
-                        const startPixel = x.getPixelForValue(startIndex);
-                        const endPixel = x.getPixelForValue(endIndex);
-                        const middlePixel = startPixel + (endPixel - startPixel) / 2;
-                        if (middlePixel < left || middlePixel > right) {
-                            return;
-                        }
-                        ctx.strokeStyle = '#9CA3AF';
-                        ctx.lineWidth = 1;
-                        ctx.fillStyle = '#4B5563';
-                        ctx.beginPath();
-                        ctx.moveTo(startPixel, bottom + 15);
-                        ctx.lineTo(endPixel, bottom + 15);
-                        ctx.stroke();
-                        ctx.beginPath();
-                        ctx.moveTo(middlePixel, bottom + 15);
-                        ctx.lineTo(middlePixel, bottom + 20);
-                        ctx.stroke();
-                        ctx.fillText(anno.name, middlePixel, bottom + 35);
-                    });
-                    ctx.restore();
-                }
-            };
+            const createChartOptions = t => ({ responsive: true, maintainAspectRatio: false, interaction: {mode: 'index', intersect: false}, layout: {padding: {bottom: 40}}, plugins: { legend: {position: 'top', labels: {usePointStyle: true, boxWidth: 8, padding: 20}}, tooltip: { backgroundColor: '#1f2937', titleFont: {size: 14}, bodyFont: {size: 12}, padding: 10, cornerRadius: 6, boxPadding: 3 }, stageAnnotations: {annotations: [], view: 'weekly'} }, scales: { x: {grid: {display: false}, ticks: {display: false}}, y: {title: {display: true, text: t}, grace: '5%', beginAtZero: true} } });
+            const stageAnnotationsPlugin = { id: 'stageAnnotations', afterDraw: (chart) => { if (chart.config.options.plugins.stageAnnotations.view !== 'weekly') { return; } const {ctx, chartArea: {bottom, left, right}, scales: {x}} = chart; const annotations = chart.config.options.plugins.stageAnnotations.annotations; if (!annotations) { return; } ctx.save(); ctx.font = 'bold 12px "Inter", sans-serif'; ctx.textAlign = 'center'; annotations.forEach(anno => { const startIndex = chart.data.labels.indexOf(anno.start_week_label); const endIndex = chart.data.labels.indexOf(anno.end_week_label); if (startIndex === -1 || endIndex === -1) { return; } const startPixel = x.getPixelForValue(startIndex); const endPixel = x.getPixelForValue(endIndex); const middlePixel = startPixel + (endPixel - startPixel) / 2; if (middlePixel < left || middlePixel > right) { return; } ctx.strokeStyle = '#9CA3AF'; ctx.lineWidth = 1; ctx.fillStyle = '#4B5563'; ctx.beginPath(); ctx.moveTo(startPixel, bottom + 15); ctx.lineTo(endPixel, bottom + 15); ctx.stroke(); ctx.beginPath(); ctx.moveTo(middlePixel, bottom + 15); ctx.lineTo(middlePixel, bottom + 20); ctx.stroke(); ctx.fillText(anno.name, middlePixel, bottom + 35); }); ctx.restore(); } };
             const durationCtx = document.getElementById('durationChart')?.getContext('2d');
             const efficiencyCtx = document.getElementById('efficiencyChart')?.getContext('2d');
-            if (!durationCtx || !efficiencyCtx) {
-                return;
-            }
-            durationChart = new Chart(durationCtx, {
-                type: 'bar',
-                options: createChartOptions('学习时长 (小时)'),
-                plugins: [stageAnnotationsPlugin]
-            });
-            efficiencyChart = new Chart(efficiencyCtx, {
-                type: 'bar',
-                options: createChartOptions('学习效率'),
-                plugins: [stageAnnotationsPlugin]
-            });
-
-            async function fetchDataAndRender() {
-                try {
-                    const response = await fetch("{{ url_for('charts.get_chart_data') }}");
-                    if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
-                    const data = await response.json();
-                    if (!data.has_data) {
-                        document.getElementById('trends-pane').innerHTML = '<div class="alert alert-info text-center">暂无学习数据，无法生成趋势图表。</div>';
-                        return;
-                    }
-                    dataStore = data;
-                    document.getElementById('kpi-avg-time').textContent = data.kpis.avg_daily_formatted || 'N/A';
-                    document.getElementById('kpi-efficiency-star').textContent = data.kpis.efficiency_star || 'N/A';
-                    document.getElementById('kpi-weekly-trend').textContent = data.kpis.weekly_trend || 'N/A';
-                    updateCharts('weekly');
-                } catch (error) {
-                    console.error('Error fetching trend data:', error);
-                    document.getElementById('trends-pane').innerHTML = '<div class="alert alert-danger">无法加载趋势图表数据，请稍后重试。</div>';
-                }
-            }
-
-            function updateCharts(view) {
-                if (!dataStore.has_data || !dataStore[`${view}_duration_data`]) return;
-                const durationData = dataStore[`${view}_duration_data`],
-                    efficiencyData = dataStore[`${view}_efficiency_data`];
-                durationChart.data = {
-                    labels: durationData.labels,
-                    datasets: [{
-                        type: 'bar',
-                        label: '实际时长',
-                        data: durationData.actuals,
-                        backgroundColor: 'rgba(96, 165, 250, 0.5)',
-                        order: 2
-                    }, {
-                        type: 'line',
-                        label: '趋势',
-                        data: durationData.trends,
-                        borderColor: '#2563EB',
-                        tension: .4,
-                        fill: false,
-                        pointRadius: 0,
-                        borderWidth: 2.5,
-                        order: 1
-                    }]
-                };
-                efficiencyChart.data = {
-                    labels: efficiencyData.labels,
-                    datasets: [{
-                        type: 'bar',
-                        label: '实际效率',
-                        data: efficiencyData.actuals,
-                        backgroundColor: 'rgba(248, 113, 113, 0.5)',
-                        order: 2
-                    }, {
-                        type: 'line',
-                        label: '趋势',
-                        data: efficiencyData.trends,
-                        borderColor: '#991B1B',
-                        tension: .4,
-                        fill: false,
-                        pointRadius: 0,
-                        borderWidth: 2.5,
-                        order: 1,
-                        spanGaps: true
-                    }]
-                };
-                durationChart.config.options.plugins.stageAnnotations = {
-                    annotations: dataStore.stage_annotations,
-                    view: view
-                };
-                efficiencyChart.config.options.plugins.stageAnnotations = {
-                    annotations: dataStore.stage_annotations,
-                    view: view
-                };
-                durationChart.update();
-                efficiencyChart.update();
-            }
-
-            document.querySelectorAll('#trends-controls .btn').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    document.querySelector('#trends-controls .btn.active').classList.remove('active');
-                    this.classList.add('active');
-                    updateCharts(this.dataset.view)
-                })
-            });
+            if (!durationCtx || !efficiencyCtx) { return; }
+            durationChart = new Chart(durationCtx, { type: 'bar', options: createChartOptions('学习时长 (小时)'), plugins: [stageAnnotationsPlugin] });
+            efficiencyChart = new Chart(efficiencyCtx, { type: 'bar', options: createChartOptions('学习效率'), plugins: [stageAnnotationsPlugin] });
+            async function fetchDataAndRender() { try { const response = await fetch("{{ url_for('charts.get_chart_data') }}"); if (!response.ok) throw new Error(`API request failed: ${response.statusText}`); const data = await response.json(); if (!data.has_data) { document.getElementById('trends-pane').innerHTML = '<div class="alert alert-info text-center">暂无学习数据，无法生成趋势图表。</div>'; return; } dataStore = data; document.getElementById('kpi-avg-time').textContent = data.kpis.avg_daily_formatted || 'N/A'; document.getElementById('kpi-efficiency-star').textContent = data.kpis.efficiency_star || 'N/A'; document.getElementById('kpi-weekly-trend').textContent = data.kpis.weekly_trend || 'N/A'; updateCharts('weekly'); } catch (error) { console.error('Error fetching trend data:', error); document.getElementById('trends-pane').innerHTML = '<div class="alert alert-danger">无法加载趋势图表数据，请稍后重试。</div>'; } }
+            function updateCharts(view) { if (!dataStore.has_data || !dataStore[`${view}_duration_data`]) return; const durationData = dataStore[`${view}_duration_data`], efficiencyData = dataStore[`${view}_efficiency_data`]; durationChart.data = { labels: durationData.labels, datasets: [{ type: 'bar', label: '实际时长', data: durationData.actuals, backgroundColor: 'rgba(96, 165, 250, 0.5)', order: 2 }, { type: 'line', label: '趋势', data: durationData.trends, borderColor: '#2563EB', tension: .4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1 }] }; efficiencyChart.data = { labels: efficiencyData.labels, datasets: [{ type: 'bar', label: '实际效率', data: efficiencyData.actuals, backgroundColor: 'rgba(248, 113, 113, 0.5)', order: 2 }, { type: 'line', label: '趋势', data: efficiencyData.trends, borderColor: '#991B1B', tension: .4, fill: false, pointRadius: 0, borderWidth: 2.5, order: 1, spanGaps: true }] }; durationChart.config.options.plugins.stageAnnotations = { annotations: dataStore.stage_annotations, view: view }; efficiencyChart.config.options.plugins.stageAnnotations = { annotations: dataStore.stage_annotations, view: view }; durationChart.update(); efficiencyChart.update(); }
+            document.querySelectorAll('#trends-controls .btn').forEach(btn => { btn.addEventListener('click', function () { document.querySelector('#trends-controls .btn.active').classList.remove('active'); this.classList.add('active'); updateCharts(this.dataset.view); }) });
             fetchDataAndRender();
         })();
 
+        // --- MODIFICATION START: Interactive Category Chart Logic ---
         (function () {
-            // Category logic...
             let doughnutChart, barChart, rawData, currentView = 'main', currentCategory = '';
             const doughnutCtx = document.getElementById('categoryDoughnutChart'),
                 barCtx = document.getElementById('categoryBarChart');
             if (!doughnutCtx || !barCtx) return;
+
             const stageFilter = document.getElementById('stageFilter'),
                 backButton = document.getElementById('backButton'),
                 tableContainer = document.getElementById('category-table-container'),
@@ -415,10 +367,8 @@
                 doughnutCenterText = document.querySelector('#doughnut-center-text h3'),
                 chartColors = ['#60A5FA', '#F87171', '#FBBF24', '#4ADE80', '#A78BFA', '#2DD4BF', '#F472B6', '#818CF8', '#FB923C', '#34D399'];
 
-            // The plugin is NOT registered globally
-            // Chart.register(ChartDataLabels);
-
-            const createClickHandler = (chart) => (evt, elements) => {
+            // --- Handlers for Interactivity ---
+            const handleChartClick = (evt, elements, chart) => {
                 if (elements.length > 0) {
                     const index = elements[0].index;
                     const label = chart.data.labels[index];
@@ -429,58 +379,55 @@
                     }
                 }
             };
-            const createHoverHandler = (chart) => (evt, elements) => {
+
+            const handleChartHover = (evt, elements, chart) => {
                 chart.canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default';
                 const highlightIndex = elements.length > 0 ? elements[0].index : null;
+
+                // Sync hover state across both charts
                 [doughnutChart, barChart].forEach(c => {
-                    const ds = c.data.datasets[0];
-                    if (ds) {
-                        ds.borderWidth = c.data.labels.map((_, i) => i === highlightIndex ? 3 : 1);
-                        ds.borderColor = c.data.labels.map((_, i) => i === highlightIndex ? '#333' : 'transparent');
-                        c.update('none');
-                    }
+                    const activeElements = (highlightIndex === null) ? [] : [{ datasetIndex: 0, index: highlightIndex }];
+                    c.setActiveElements(activeElements);
+                    c.update();
                 });
-                document.querySelectorAll('#category-table-container tr').forEach((tr, i) => {
-                    tr.classList.toggle('table-active', i === highlightIndex);
+
+                // Sync hover state for the table
+                document.querySelectorAll('#category-table-container tr[data-index]').forEach(tr => {
+                    tr.style.backgroundColor = (tr.dataset.index == highlightIndex) ? 'rgba(0,0,0,0.05)' : '';
                 });
             };
-            const doughnutOptions = {
+
+            // --- Chart Options ---
+            const commonOptions = {
                 responsive: true,
                 maintainAspectRatio: false,
-                cutout: '70%',
-                plugins: {
-                    legend: {display: false},
-                    tooltip: {callbacks: {label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时 (${(c.parsed / c.chart.getDatasetMeta(0).total * 100).toFixed(1)}%)`}}
-                },
-                onClick: createClickHandler(doughnutChart),
-                onHover: createHoverHandler(doughnutChart)
+                onHover: handleChartHover,
+                onClick: handleChartClick,
             };
 
-            // THIS IS THE FIX: The 'datalabels' plugin configuration is completely removed.
-            const barOptions = {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {display: false},
-                    tooltip: {callbacks: {label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时`}}
-                },
-                scales: {x: {display: false, grid: {display: false}}, y: {grid: {display: false}}},
-                onClick: createClickHandler(barChart),
-                onHover: createHoverHandler(barChart)
-            };
+            doughnutChart = new Chart(doughnutCtx, {
+                type: 'doughnut',
+                options: { ...commonOptions, cutout: '70%', plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时 (${(c.parsed / c.chart.getDatasetMeta(0).total * 100).toFixed(1)}%)` } } } }
+            });
 
-            doughnutChart = new Chart(doughnutCtx, {type: 'doughnut', options: doughnutOptions});
-            barChart = new Chart(barCtx, {type: 'bar', options: barOptions});
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                options: { ...commonOptions, indexAxis: 'y', plugins: { legend: {display: false}, tooltip: {callbacks: {label: c => `${c.label || ''}: ${c.parsed.toFixed(1)}小时`}}}, scales: {x: {display: false, grid: {display: false}}, y: {grid: {display: false}}} }
+            });
 
+            // --- Data & Rendering Logic ---
             async function fetchAndRenderAll() {
                 try {
-                    const stageId = stageFilter.value,
-                        response = await fetch(`/category_charts/api/data?stage_id=${stageId}`);
+                    const stageId = stageFilter.value;
+                    const response = await fetch(`/category_charts/api/data?stage_id=${stageId}`);
                     if (!response.ok) throw new Error(`API request failed: ${response.statusText}`);
-                    rawData = await response.json(), currentView = 'main', currentCategory = '', updateAllCharts()
+                    rawData = await response.json();
+                    currentView = 'main';
+                    currentCategory = '';
+                    updateAllCharts();
                 } catch (error) {
-                    console.error('Error fetching category data:', error), document.getElementById('category-pane').innerHTML = '<div class="alert alert-danger">无法加载分类图表数据。</div>'
+                    console.error('Error fetching category data:', error);
+                    document.getElementById('category-pane').innerHTML = '<div class="alert alert-danger">无法加载分类图表数据。</div>';
                 }
             }
 
@@ -489,84 +436,81 @@
                 if (currentView === 'drilldown') {
                     chartData = rawData.drilldown[currentCategory];
                     title = `${currentCategory} - 标签详情`;
-                    backButton.style.display = 'inline-block'
+                    backButton.style.display = 'inline-block';
                 } else {
                     chartData = rawData.main;
                     title = '分类时长占比';
-                    backButton.style.display = 'none'
+                    backButton.style.display = 'none';
                 }
+
                 chartTitle.textContent = title;
+
                 if (chartData && chartData.labels.length > 0) {
-                    const sortedData = chartData.labels.map((label, i) => ({
-                        label: label,
-                        value: chartData.data[i]
-                    })).sort((a, b) => b.value - a.value);
+                    const sortedData = chartData.labels.map((label, i) => ({ label: label, value: chartData.data[i] })).sort((a, b) => b.value - a.value);
                     const labels = sortedData.map(d => d.label);
                     const data = sortedData.map(d => d.value);
                     const totalHours = data.reduce((a, b) => a + b, 0);
-                    doughnutChart.data = {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: chartColors,
-                            borderWidth: 1,
-                            borderColor: 'transparent'
-                        }]
-                    };
-                    barChart.data = {
-                        labels: labels,
-                        datasets: [{
-                            data: data,
-                            backgroundColor: chartColors,
-                            borderWidth: 1,
-                            borderColor: 'transparent'
-                        }]
-                    };
+
+                    const chartDataset = { data: data, backgroundColor: chartColors, borderWidth: 2, borderColor: 'transparent' };
+                    doughnutChart.data = { labels: labels, datasets: [chartDataset] };
+                    barChart.data = { labels: labels, datasets: [chartDataset] };
+
                     doughnutChart.update();
                     barChart.update();
+
                     doughnutCenterText.textContent = `${totalHours.toFixed(1)}h`;
                     renderTable(sortedData, totalHours);
                 } else {
-                    document.getElementById('category-pane').innerHTML = '<div class="alert alert-info text-center">当前筛选范围内没有找到任何带分类的学习记录。</div>';
+                     document.getElementById('category-pane').innerHTML = '<div class="alert alert-info text-center">当前筛选范围内没有找到任何带分类的学习记录。</div>';
                 }
             }
 
             function renderTable(data, total) {
-                let tableHtml = '<table class="table table-hover category-data-table"><thead><tr><th>名称</th><th>时长(h)</th><th>占比(%)</th></tr></thead><tbody>';
+                let tableHtml = '<table class="table table-hover"><thead><tr><th>名称</th><th>时长(h)</th><th>占比(%)</th></tr></thead><tbody>';
                 data.forEach((item, index) => {
                     const percentage = total > 0 ? (item.value / total * 100).toFixed(1) : 0;
                     tableHtml += `<tr data-index="${index}" data-label="${item.label}"><td>${item.label}</td><td>${item.value.toFixed(1)}</td><td>${percentage}%</td></tr>`;
                 });
                 tableHtml += '</tbody></table>';
                 tableContainer.innerHTML = tableHtml;
-                tableContainer.querySelectorAll('tr').forEach(row => {
+
+                // Add event listeners to new table rows
+                tableContainer.querySelectorAll('tr[data-index]').forEach(row => {
                     row.addEventListener('click', () => {
-                        if (currentView === 'main') {
-                            const label = row.dataset.label;
-                            if (rawData.drilldown[label] && rawData.drilldown[label].labels.length > 0) {
-                                currentCategory = label;
-                                currentView = 'drilldown';
-                                updateAllCharts();
-                            }
+                        const label = row.dataset.label;
+                        if (currentView === 'main' && rawData.drilldown[label] && rawData.drilldown[label].labels.length > 0) {
+                            currentCategory = label;
+                            currentView = 'drilldown';
+                            updateAllCharts();
                         }
                     });
-                    row.addEventListener('mouseenter', () => createHoverHandler(barChart)(null, [{index: parseInt(row.dataset.index)}]));
-                    row.addEventListener('mouseleave', () => createHoverHandler(barChart)(null, []));
+
+                    row.addEventListener('mouseenter', () => {
+                        const index = parseInt(row.dataset.index);
+                        handleChartHover(null, [{index: index}], doughnutChart);
+                    });
+                    row.addEventListener('mouseleave', () => {
+                         handleChartHover(null, [], doughnutChart);
+                    });
                 });
             }
 
+            // --- Initial Setup and Event Listeners ---
             stageFilter.addEventListener('change', fetchAndRenderAll);
             backButton.addEventListener('click', () => {
                 currentView = 'main';
-                updateAllCharts()
+                updateAllCharts();
             });
+
             let isCategoryTabLoaded = false;
-            categoryTabBtn.addEventListener('shown.bs.tab', function () {
+            document.getElementById('category-tab').addEventListener('shown.bs.tab', function () {
                 if (!isCategoryTabLoaded) {
-                    fetchAndRenderAll(), isCategoryTabLoaded = true
+                    fetchAndRenderAll();
+                    isCategoryTabLoaded = true;
                 }
             });
         })();
+        // --- MODIFICATION END ---
     });
 </script>
 {% endblock %}

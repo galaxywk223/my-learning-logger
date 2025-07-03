@@ -26,7 +26,7 @@ def add_category():
         db.session.commit()
         flash(f'大分类 “{name}” 已成功添加！', 'success')
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
 
 
 @category_bp.route('/category/edit/<int:category_id>', methods=['POST'])
@@ -41,7 +41,7 @@ def edit_category(category_id):
         db.session.commit()
         flash('大分类已更新。', 'success')
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
 
 
 @category_bp.route('/category/delete/<int:category_id>', methods=['POST'])
@@ -56,7 +56,7 @@ def delete_category(category_id):
         db.session.commit()
         flash(f'大分类 “{category.name}” 已删除。', 'info')
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
 
 
 # --- 小分类 (SubCategory) 操作 ---
@@ -80,7 +80,7 @@ def add_subcategory():
             db.session.commit()
             flash(f'小分类 “{name}” 已成功添加到 “{parent_category.name}”！', 'success')
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
 
 
 @category_bp.route('/subcategory/edit/<int:subcategory_id>', methods=['POST'])
@@ -108,7 +108,7 @@ def edit_subcategory(subcategory_id):
             flash('小分类已更新。', 'success')
 
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
 
 
 @category_bp.route('/subcategory/delete/<int:subcategory_id>', methods=['POST'])
@@ -127,4 +127,4 @@ def delete_subcategory(subcategory_id):
         flash(f'小分类 “{subcategory.name}” 已删除。', 'info')
 
     # MODIFIED: Redirect to the settings page, category tab
-    return redirect(url_for('main.settings') + '#category-management')
+    return redirect(url_for('main.settings_content') + '#headingCategories')
