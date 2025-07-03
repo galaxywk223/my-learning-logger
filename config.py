@@ -1,5 +1,4 @@
-# config.py (Final, most robust version for deployment)
-
+# config.py (Simplified for the final deployment fix)
 import os
 
 class Config:
@@ -19,16 +18,9 @@ class TestingConfig(Config):
     WTF_CSRF_ENABLED = False
 
 class ProductionConfig(Config):
-    """
-    生产环境配置。
-    """
+    # The database URI is now primarily configured for Alembic in migrations/env.py
+    # This value is for the Flask app itself at runtime.
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace("postgres://", "postgresql://", 1)
-
-    @staticmethod
-    def init_app(app):
-        # 这个方法必须存在以供 create_app 调用，
-        # 但我们已将配置逻辑移到类级别，所以这里什么都不用做。
-        pass
 
 config = {
     'development': DevelopmentConfig,
