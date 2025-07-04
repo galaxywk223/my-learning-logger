@@ -16,7 +16,7 @@
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='custom.css') }}">
+    {# --- 移除对 custom.css 的引用 --- #}
 
     <style>
         body {
@@ -96,7 +96,6 @@
 
     <main class="main-content">
         <div class="container-fluid">
-            {# --- MODIFICATION: The old flash message container is removed from here --- #}
             {% block content %}{% endblock %}
         </div>
     </main>
@@ -111,14 +110,10 @@
 <script>
     lucide.createIcons();
 
-    // --- MODIFICATION START: Convert backend flashed messages to Toasts ---
-    // This script runs on every page load to check for traditional flashed messages
-    // and displays them using our new Toast system.
     document.addEventListener('DOMContentLoaded', () => {
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
-                    // The showToast function is globally available from main.js
                     if(typeof showToast === 'function') {
                         showToast("{{ message }}", "{{ category }}");
                     }
@@ -126,7 +121,6 @@
             {% endif %}
         {% endwith %}
     });
-    // --- MODIFICATION END ---
 </script>
 {% block scripts %}{% endblock %}
 </body>

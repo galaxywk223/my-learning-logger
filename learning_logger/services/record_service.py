@@ -1,4 +1,5 @@
-# learning_logger/services/record_service.py (Final Architecture: Separation of Concerns)
+# learning_logger/services/record_service.py (MODIFIED FOR LOGARITHMIC EFFICIENCY)
+import math  # <-- 1. 新增导入 math 库
 from datetime import date, timedelta
 from itertools import groupby
 from flask import current_app
@@ -7,11 +8,39 @@ from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCatego
 from ..helpers import get_custom_week_info
 
 
-# --- Private Calculation Engine ---
+# --- Private Calculation Engine (已按方案C修改) ---
 def _calculate_daily_efficiency_score(log_date, stage_id):
+    """
+    按“方案C：对数加权模型”计算每日效率分。
+    公式: 每日效率 = (加权平均心情) × log(1 + 总学习小时数)
+    """
     logs_for_day = LogEntry.query.filter_by(log_date=log_date, stage_id=stage_id).all()
-    total_score = sum((log.actual_duration or 0) * (log.mood or 3) for log in logs_for_day)
-    return total_score / 60.0
+
+    if not logs_for_day:
+        return 0.0
+
+    total_duration_minutes = sum(log.actual_duration or 0 for log in logs_for_day)
+
+    # 如果当天没有学习时长，则效率为0
+    if total_duration_minutes == 0:
+        return 0.0
+
+    # 2. 计算加权心情总分 和 总时长
+    weighted_mood_duration_sum = sum((log.actual_duration or 0) * (log.mood or 3) for log in logs_for_day)
+
+    # 3. 计算“加权平均心情”（1-5分）
+    # 这是当天的学习“质量”分
+    average_mood = weighted_mood_duration_sum / total_duration_minutes
+
+    # 4. 计算总学习小时数
+    # 这是当天的学习“数量”
+    total_hours = total_duration_minutes / 60.0
+
+    # 5. 应用最终的对数加权公式
+    # 使用 log1p(x) 等同于 log(1+x)，可以更精确地处理非常小的 x 值
+    final_score = average_mood * math.log1p(total_hours)
+
+    return final_score
 
 
 def _get_or_create_daily_data(log_date, stage_id, score):
@@ -61,6 +90,8 @@ def recalculate_efficiency_for_stage(stage):
             effective_start = max(theoretical_week_start, stage.start_date)
             effective_end = min(theoretical_week_end, stage_end_date, date.today())
             days_in_week = (effective_end - effective_start).days + 1 if effective_end >= effective_start else 0
+
+            # 周效率分现在是每日新效率分的平均值
             total_score = sum(
                 daily_efficiencies_map.get(effective_start + timedelta(days=i), 0) for i in range(days_in_week))
             average_score = total_score / days_in_week if days_in_week > 0 else 0
@@ -98,7 +129,7 @@ def get_structured_logs_for_stage(stage, sort_order='desc'):
     return sorted(structured_logs, key=lambda w: (w['year'], w['week_num']), reverse=is_reverse)
 
 
-# --- Data Modification Functions ---
+# --- Data Modification Functions (这部分代码保持不变) ---
 def add_log_for_stage(stage_id, user, form_data):
     stage = Stage.query.filter_by(id=stage_id, user_id=user.id).first()
     if not stage: return False, "指定的阶段不存在或无权访问。"
@@ -109,7 +140,6 @@ def add_log_for_stage(stage_id, user, form_data):
                                                                   Category.user_id == user.id).first()
             if not subcategory: return False, "选择了无效的分类。"
 
-        # --- MODIFIED: Calculate total duration from hours and minutes ---
         hours_str = form_data.get('duration_hours', '0')
         minutes_str = form_data.get('duration_minutes', '0')
         hours = int(hours_str) if hours_str and hours_str.strip() else 0
@@ -119,7 +149,7 @@ def add_log_for_stage(stage_id, user, form_data):
         new_log = LogEntry(stage_id=stage.id, log_date=date.fromisoformat(form_data['log_date']),
                            task=form_data.get('task'), time_slot=form_data.get('time_slot'),
                            notes=form_data.get('notes'),
-                           actual_duration=total_duration,  # Use calculated total duration
+                           actual_duration=total_duration,
                            mood=form_data.get('mood', type=int),
                            subcategory_id=subcategory_id)
         db.session.add(new_log)
@@ -143,7 +173,6 @@ def update_log_for_user(log_id, user, form_data):
                                                                   Category.user_id == user.id).first()
             if not subcategory: return False, "选择了无效的分类。"
 
-        # --- MODIFIED: Calculate total duration from hours and minutes ---
         hours_str = form_data.get('duration_hours', '0')
         minutes_str = form_data.get('duration_minutes', '0')
         hours = int(hours_str) if hours_str and hours_str.strip() else 0
@@ -154,7 +183,7 @@ def update_log_for_user(log_id, user, form_data):
         log.task = form_data.get('task')
         log.time_slot = form_data.get('time_slot')
         log.notes = form_data.get('notes')
-        log.actual_duration = total_duration  # Use calculated total duration
+        log.actual_duration = total_duration
         log.mood = form_data.get('mood', type=int)
         log.subcategory_id = subcategory_id
 
@@ -182,6 +211,5 @@ def delete_log_for_user(log_id, user):
         return False, f'删除时发生错误: {e}'
 
 
-# --- Authorization Helpers ---
 def get_log_entry_for_user(log_id, user):
     return LogEntry.query.join(Stage).filter(Stage.user_id == user.id, LogEntry.id == log_id).first()
