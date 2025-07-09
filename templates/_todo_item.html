@@ -36,6 +36,7 @@
                 <i data-lucide="pencil"></i>
             </button>
             <form action="{{ url_for('todo.delete_todo', todo_id=todo.id) }}" method="POST" class="d-inline" onsubmit="return confirm('确定要删除这个待办事项吗？');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="btn btn-sm btn-outline-danger">
                     <i data-lucide="trash-2"></i>
                 </button>

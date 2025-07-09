@@ -144,6 +144,7 @@
                             <li><hr class="dropdown-divider"></li>
                             <li>
                                 <form action="{{ url_for('milestone.delete_milestone', milestone_id=milestone.id) }}" method="POST" onsubmit="return confirm('确定要永久删除这个成就吗？');">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                                     <button type="submit" class="dropdown-item text-danger">删除</button>
                                 </form>
                             </li>
