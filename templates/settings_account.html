@@ -78,6 +78,8 @@
                     <p class="text-muted mb-0">此操作将永久删除您账户下的所有数据（包括学习记录、阶段、分类等），且无法撤销。</p>
                 </div>
                 <form method="POST" action="{{ url_for('main.clear_my_data') }}" class="ms-3">
+                    {# --- 新增: 为“清空数据”表单添加 CSRF 令牌 --- #}
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                     <button type="submit" class="btn btn-danger" onclick="return confirm('最后警告：您确定要永久删除您的所有个人数据吗？此操作无法恢复！')">
                         <i data-lucide="trash-2" class="me-2"></i>立即清空
                     </button>

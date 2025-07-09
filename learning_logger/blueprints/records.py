@@ -7,11 +7,14 @@ from flask_login import login_required, current_user
 
 from ..services import record_service, data_service
 from ..models import Stage, Category, SubCategory
+# 新增: 导入 DataImportForm
+from ..forms import DataImportForm
 
 records_bp = Blueprint('records', __name__)
 
 
 def _get_category_data_for_form():
+    # ... (此函数内容不变) ...
     """Helper to fetch and structure category data for the form."""
     all_categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
     all_subcategories = {}
@@ -24,6 +27,7 @@ def _get_category_data_for_form():
 @records_bp.route('/')
 @login_required
 def list_records():
+    # ... (此函数内容不变) ...
     all_stages = Stage.query.filter_by(user_id=current_user.id).order_by(Stage.start_date.desc()).all()
     active_stage = None
     stage_id = request.args.get('stage_id', type=int)
@@ -42,7 +46,6 @@ def list_records():
             session['active_stage_id'] = active_stage.id
     if not active_stage:
         flash('欢迎使用！请先创建一个新的学习阶段以开始记录。', 'info')
-        # BUG FIX: Redirect to the correct settings page if no stage exists
         return redirect(url_for('main.settings_content'))
 
     sort_order = request.args.get('sort', 'desc')
@@ -60,6 +63,7 @@ def list_records():
 @records_bp.route('/form/add')
 @login_required
 def get_add_form():
+    # ... (此函数内容不变) ...
     active_stage_id = session.get('active_stage_id')
     if not active_stage_id:
         return jsonify({'success': False, 'message': '请先选择一个有效的学习阶段。'})
@@ -78,6 +82,7 @@ def get_add_form():
 @records_bp.route('/form/edit/<int:log_id>')
 @login_required
 def get_edit_form(log_id):
+    # ... (此函数内容不变) ...
     log = record_service.get_log_entry_for_user(log_id, current_user)
     if not log:
         return jsonify({'success': False, 'message': '记录不存在或无权访问。'})
@@ -90,6 +95,7 @@ def get_edit_form(log_id):
 @records_bp.route('/add', methods=['POST'])
 @login_required
 def add():
+    # ... (此函数内容不变) ...
     active_stage_id = session.get('active_stage_id')
     if not active_stage_id:
         return jsonify({'success': False, 'message': '无法添加记录，未找到当前活动阶段。'}), 400
@@ -104,6 +110,7 @@ def add():
 @records_bp.route('/edit/<int:log_id>', methods=['POST'])
 @login_required
 def edit(log_id):
+    # ... (此函数内容不变) ...
     success, message = record_service.update_log_for_user(log_id, current_user, request.form)
     if success:
         return jsonify({'success': True, 'message': message})
@@ -115,6 +122,7 @@ def edit(log_id):
 @records_bp.route('/delete/<int:log_id>', methods=['POST'])
 @login_required
 def delete(log_id):
+    # ... (此函数内容不变) ...
     success, message = record_service.delete_log_for_user(log_id, current_user)
     if success:
         return jsonify({'success': True, 'message': message})
@@ -123,36 +131,45 @@ def delete(log_id):
         return jsonify({'success': False, 'message': message}), 400
 
 
-@records_bp.route('/export/json')
+@records_bp.route('/export/zip')
 @login_required
-def export_json():
-    json_output = data_service.export_data_for_user(current_user)
-    filename = f"{current_user.username}_backup_{date.today().isoformat()}.json"
-    return Response(json_output, mimetype="application/json",
-                    headers={"Content-Disposition": f"attachment;filename={filename}"})
+def export_zip():
+    # ... (此函数内容不变) ...
+    zip_buffer = data_service.export_data_for_user(current_user)
+    username = current_user.username.replace(" ", "_")
+    filename = f"{username}_backup_{date.today().isoformat()}.zip"
+    return Response(
+        zip_buffer,
+        mimetype="application/zip",
+        headers={"Content-Disposition": f"attachment;filename={filename}"}
+    )
 
 
-@records_bp.route('/import/json', methods=['POST'])
+@records_bp.route('/import/zip', methods=['POST'])
 @login_required
-def import_json():
-    file = request.files.get('file')
-    if not file or not file.filename.endswith('.json'):
-        flash('请选择一个有效的 .json 备份文件。', 'error')
-        # BUG FIX: Redirect to the correct data settings page
-        return redirect(url_for('main.settings_data'))
+def import_zip():
+    # 修改: 使用 DataImportForm 来验证提交
+    form = DataImportForm()
+    if form.validate_on_submit():
+        # 验证通过，从表单对象中获取文件
+        file_storage = form.file.data
+        success, message = data_service.import_data_for_user(current_user, file_storage.stream)
 
-    success, message = data_service.import_data_for_user(current_user, file.stream)
-
-    if success:
-        current_app.logger.info("Import successful. Triggering efficiency recalculation for all stages.")
-        all_user_stages = Stage.query.filter_by(user_id=current_user.id).all()
-        for stage in all_user_stages:
-            record_service.recalculate_efficiency_for_stage(stage)
-        current_app.logger.info("Efficiency recalculation finished.")
-        flash(message, 'success')
-        return redirect(url_for('records.list_records'))
+        if success:
+            current_app.logger.info("Import successful. Triggering efficiency recalculation for all stages.")
+            all_user_stages = Stage.query.filter_by(user_id=current_user.id).all()
+            for stage in all_user_stages:
+                record_service.recalculate_efficiency_for_stage(stage)
+            current_app.logger.info("Efficiency recalculation finished.")
+            flash(message, 'success')
+            return redirect(url_for('records.list_records'))
+        else:
+            current_app.logger.error(f"Import failed for user {current_user.id}: {message}")
+            flash(message, 'error')
+            return redirect(url_for('main.settings_data'))
     else:
-        current_app.logger.error(f"Import failed for user {current_user.id}: {message}")
-        flash(message, 'error')
-        # BUG FIX: Redirect to the correct data settings page
+        # 验证失败，闪现表单中的错误信息
+        for field, errors in form.errors.items():
+            for error in errors:
+                flash(error, 'danger')
         return redirect(url_for('main.settings_data'))

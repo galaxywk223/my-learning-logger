@@ -1,4 +1,5 @@
 from flask_wtf import FlaskForm
+from flask_wtf.file import FileField, FileRequired, FileAllowed
 from wtforms import StringField, PasswordField, BooleanField, SubmitField
 from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
 from .models import User
@@ -30,3 +31,15 @@ class RegistrationForm(FlaskForm):
         user = User.query.filter_by(email=email.data).first()
         if user is not None:
             raise ValidationError('该邮箱已被注册，请换一个。')
+
+# --- 新增: 数据导入表单 ---
+class DataImportForm(FlaskForm):
+    """数据导入表单，包含文件上传和CSRF保护"""
+    file = FileField(
+        '选择 .zip 备份文件',
+        validators=[
+            FileRequired(message='请选择一个文件。'),
+            FileAllowed(['zip'], message='只能上传 .zip 文件！')
+        ]
+    )
+    submit = SubmitField('导入并覆盖')

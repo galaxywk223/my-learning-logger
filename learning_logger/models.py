@@ -30,6 +30,7 @@ class User(UserMixin, db.Model):
     settings = db.relationship('Setting', backref='user', lazy='dynamic', cascade="all, delete-orphan")
     mottos = db.relationship('Motto', backref='user', lazy='dynamic', cascade="all, delete-orphan")
     todos = db.relationship('Todo', backref='user', lazy='dynamic', cascade="all, delete-orphan")
+    daily_plans = db.relationship('DailyPlanItem', backref='user', lazy='dynamic', cascade="all, delete-orphan")
 
     def set_password(self, password): self.password_hash = generate_password_hash(password)
 
@@ -154,3 +155,62 @@ class SubCategory(db.Model):
     log_entries = db.relationship('LogEntry', backref='subcategory', lazy='dynamic')
 
     def __repr__(self): return f'<SubCategory {self.name}>'
+
+
+# ... (at the end of the file, after class SubCategory)
+
+# ============================================================================
+# NEW MODELS FOR MILESTONES FEATURE
+# ============================================================================
+
+class MilestoneCategory(db.Model):
+    __tablename__ = 'milestone_category'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    milestones = db.relationship('Milestone', backref='category', lazy='dynamic', cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<MilestoneCategory {self.name}>'
+
+
+class Milestone(db.Model):
+    __tablename__ = 'milestone'
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(200), nullable=False)
+    event_date = db.Column(db.Date, nullable=False, default=date.today, index=True)
+    description = db.Column(db.Text, nullable=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    category_id = db.Column(db.Integer, db.ForeignKey('milestone_category.id'), nullable=True)
+    attachments = db.relationship('MilestoneAttachment', backref='milestone', lazy='dynamic',
+                                  cascade="all, delete-orphan")
+
+    def __repr__(self):
+        return f'<Milestone {self.title}>'
+
+
+class MilestoneAttachment(db.Model):
+    __tablename__ = 'milestone_attachment'
+    id = db.Column(db.Integer, primary_key=True)
+    milestone_id = db.Column(db.Integer, db.ForeignKey('milestone.id'), nullable=False)
+    # Store the path to the uploaded file
+    file_path = db.Column(db.String(256), nullable=False)
+    original_filename = db.Column(db.String(200), nullable=False)
+    uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<MilestoneAttachment {self.original_filename}>'
+
+
+class DailyPlanItem(db.Model):
+    __tablename__ = 'daily_plan_item'
+    id = db.Column(db.Integer, primary_key=True)
+    plan_date = db.Column(db.Date, nullable=False, default=date.today, index=True)
+    content = db.Column(db.String(500), nullable=False)
+    time_slot = db.Column(db.String(20), nullable=True)  # e.g., '上午', '下午', '晚上'
+    is_completed = db.Column(db.Boolean, default=False, nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    def __repr__(self):
+        return f'<DailyPlanItem {self.content[:30]}>'

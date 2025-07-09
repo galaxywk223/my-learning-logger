@@ -11,12 +11,12 @@
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted">
-                    将您的所有学习记录、阶段、分类和设置备份到一个 .json 文件中。这是一个很好的习惯，可以防止数据丢失。
+                    将您的所有学习记录、阶段、分类、成就、计划和附件图片备份到一个 .zip 压缩包中。这是一个很好的习惯，可以防止数据丢失。
                 </p>
                 <div class="mt-auto">
-                    <a href="{{ url_for('records.export_json') }}" class="btn btn-secondary w-100">
+                    <a href="{{ url_for('records.export_zip') }}" class="btn btn-secondary w-100">
                         <i data-lucide="download" class="me-2"></i>
-                        <span>导出我的全部数据</span>
+                        <span>导出我的全部数据 (.zip)</span>
                     </a>
                 </div>
             </div>
@@ -32,18 +32,21 @@
             </div>
             <div class="card-body d-flex flex-column">
                 <p class="text-muted">
-                    从之前导出的 .json 文件中恢复您的数据。请注意：此操作将<strong class="text-danger">完全覆盖</strong>您当前的所有数据！
+                    从之前导出的 .zip 备份文件中恢复您的数据。请注意：此操作将<strong class="text-danger">完全覆盖</strong>您当前的所有数据！
                 </p>
-                <form method="POST" action="{{ url_for('records.import_json') }}" enctype="multipart/form-data" class="d-flex flex-column flex-grow-1">
+                {# --- 核心改动: 使用 FlaskForm 对象来渲染表单 --- #}
+                <form method="POST" action="{{ url_for('records.import_zip') }}" enctype="multipart/form-data" class="d-flex flex-column flex-grow-1">
+                    {{ form.hidden_tag() }} {# 这一行会自动处理 CSRF 令牌 #}
+
                     <div class="mb-3">
-                        <label for="importFile" class="form-label">选择 .json 备份文件</label>
-                        <input class="form-control" type="file" id="importFile" name="file" accept=".json" required>
+                        {{ form.file.label(class="form-label") }}
+                        {{ form.file(class="form-control" + (" is-invalid" if form.file.errors else "")) }}
+                        {% for error in form.file.errors %}
+                            <div class="invalid-feedback">{{ error }}</div>
+                        {% endfor %}
                     </div>
                     <div class="mt-auto">
-                        <button type="submit" class="btn btn-danger w-100" onclick="return confirm('警告：此操作将覆盖您当前的所有数据，且无法撤销！确定要继续吗？')">
-                            <i data-lucide="upload" class="me-2"></i>
-                            <span>导入并覆盖</span>
-                        </button>
+                        {{ form.submit(class="btn btn-danger w-100", onclick="return confirm('警告：此操作将覆盖您当前的所有数据，且无法撤销！确定要继续吗？')") }}
                     </div>
                 </form>
             </div>

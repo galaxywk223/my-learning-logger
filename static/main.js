@@ -54,10 +54,15 @@ const showToast = (message, category = 'info') => {
 const handleAjaxFormSubmit = async (form, modalInstance = null, reloadPage = true) => {
     try {
         const formData = new FormData(form);
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content'); // 新增: 获取令牌
+
         const response = await fetch(form.action, {
             method: form.method || 'POST',
             body: formData,
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken // 新增: 将令牌添加到请求头
+            }
         });
 
         const result = await response.json();

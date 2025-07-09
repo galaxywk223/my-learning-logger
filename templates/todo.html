@@ -64,6 +64,8 @@
     </div>
     <div class="card-body">
         <form action="{{ url_for('todo.add_todo') }}" method="POST">
+            {# 新增: 为标准表单添加 CSRF 令牌 #}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row g-2 align-items-center">
                 <div class="col-lg-6">
                     <label for="content" class="visually-hidden">任务内容</label>
@@ -141,12 +143,8 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // This script will be for the new dynamic item moving,
-    // for now, we keep the simple reload logic.
     function handleToggle(checkbox) {
         const todoId = checkbox.dataset.todoId;
-
-        // --- NEW: Add transition before reload ---
         const todoItemCard = checkbox.closest('.todo-card');
         if(todoItemCard) {
             todoItemCard.style.transition = 'all 0.5s ease';
@@ -154,18 +152,22 @@ document.addEventListener('DOMContentLoaded', function() {
             todoItemCard.style.transform = 'scale(0.95)';
         }
 
+        // 新增: 获取 CSRF 令牌
+        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
         fetch(`/todo/toggle/${todoId}`, {
             method: 'POST',
-            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken // 新增: 在请求头中添加令牌
+            }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Wait for the animation to finish before reloading
                 setTimeout(() => location.reload(), 500);
             } else {
-                alert('操作失败，请刷新页面重试。');
-                // Restore card visibility if API call fails
+                showToast(data.message || '操作失败，请刷新页面重试。', 'error');
                 if(todoItemCard) {
                     todoItemCard.style.opacity = '1';
                     todoItemCard.style.transform = 'scale(1)';
@@ -174,7 +176,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Attach event listeners to all checkboxes
     document.querySelectorAll('.todo-checkbox').forEach(checkbox => {
         checkbox.addEventListener('change', function() {
             handleToggle(this);

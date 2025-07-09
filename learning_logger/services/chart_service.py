@@ -1,36 +1,36 @@
-# learning_logger/services/chart_service.py (FINAL COLOR FIX)
+# learning_logger/services/chart_service.py (FINAL CORRECTED VERSION FOR IMAGE SIZE)
 
 import collections
 import io
+import os
+import random
 from datetime import date, timedelta
 from sqlalchemy import func, desc
 import matplotlib.pyplot as plt
 import numpy as np
+from wordcloud import WordCloud
+from PIL import Image
+import jieba
+from flask import current_app
 
 from .. import db
 from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCategory
 from ..helpers import get_custom_week_info
 
-# --- 美化样式配置 (颜色格式修正) ---
+# --- Style Config & Other functions (Collapsed for brevity) ---
 plt.style.use('seaborn-v0_8-whitegrid')
 try:
     plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.rcParams['axes.unicode_minus'] = False
 except Exception:
     print("Warning: Chinese font 'SimHei' not found. Chart labels may not render correctly.")
-
-# 修正：将 rgba 字符串转换为 matplotlib 可接受的元组格式 (R/255, G/255, B/255, A)
-COLORS = {
-    'duration_bar': (96 / 255, 165 / 255, 250 / 255, 0.6),
-    'duration_line': '#2563EB',
-    'efficiency_bar': (248 / 255, 113 / 255, 113 / 255, 0.6),
-    'efficiency_line': '#B91C1C',
-    'category_palette': ['#60A5FA', '#F87171', '#FBBF24', '#4ADE80', '#A78BFA', '#2DD4BF', '#F472B6', '#818CF8']
-}
+COLORS = {'duration_bar': (96 / 255, 165 / 255, 250 / 255, 0.6), 'duration_line': '#2563EB',
+          'efficiency_bar': (248 / 255, 113 / 255, 113 / 255, 0.6), 'efficiency_line': '#B91C1C',
+          'category_palette': ['#60A5FA', '#F87171', '#FBBF24', '#4ADE80', '#A78BFA', '#2DD4BF', '#F472B6', '#818CF8']}
 
 
 def _calculate_sma(data, window_size=7):
-    # 此内部函数保持不变
+    # ... (code is unchanged)
     if not data or window_size <= 1: return [None] * len(data)
     sma_values, window = [], collections.deque(maxlen=window_size)
     for i, value in enumerate(data):
@@ -49,17 +49,13 @@ def _calculate_sma(data, window_size=7):
 
 
 def get_chart_data_for_user(user):
-    # 此数据获取函数保持不变
+    # ... (code is unchanged)
     all_stages = Stage.query.filter_by(user_id=user.id).order_by(Stage.start_date.asc()).all()
-    if not all_stages:
-        return {'kpis': {}, 'stage_annotations': [], 'setup_needed': True}, False
-
+    if not all_stages: return {'kpis': {}, 'stage_annotations': [], 'setup_needed': True}, False
     stage_ids = [s.id for s in all_stages]
     all_logs = LogEntry.query.filter(LogEntry.stage_id.in_(stage_ids)).all()
-    if not all_logs:
-        return {'kpis': {'avg_daily_minutes': 0, 'efficiency_star': 'N/A', 'weekly_trend': 'N/A'},
-                'has_data': False}, False
-
+    if not all_logs: return {'kpis': {'avg_daily_minutes': 0, 'efficiency_star': 'N/A', 'weekly_trend': 'N/A'},
+                             'has_data': False}, False
     kpis = {}
     total_duration_minutes = db.session.query(func.sum(LogEntry.actual_duration)).filter(
         LogEntry.stage_id.in_(stage_ids)).scalar() or 0
@@ -67,7 +63,6 @@ def get_chart_data_for_user(user):
         LogEntry.stage_id.in_(stage_ids)).scalar() or 0
     kpis['avg_daily_minutes'] = round(total_duration_minutes / total_days_with_logs,
                                       1) if total_days_with_logs > 0 else 0
-
     top_efficiency_day = DailyData.query.join(Stage).filter(Stage.user_id == user.id).order_by(
         desc(DailyData.efficiency)).first()
     if top_efficiency_day and top_efficiency_day.efficiency is not None:
@@ -75,7 +70,6 @@ def get_chart_data_for_user(user):
             'efficiency_star'] = f"{top_efficiency_day.log_date.strftime('%Y-%m-%d')} (效率: {top_efficiency_day.efficiency:.1f})"
     else:
         kpis['efficiency_star'] = "无足够数据"
-
     today = date.today()
     start_of_this_week = today - timedelta(days=today.weekday())
     end_of_this_week = start_of_this_week + timedelta(days=6)
@@ -96,7 +90,6 @@ def get_chart_data_for_user(user):
         kpis['weekly_trend'] = "新开始"
     else:
         kpis['weekly_trend'] = "无对比数据"
-
     first_log_date = min(log.log_date for log in all_logs)
     last_log_date = date.today()
     global_start_date = all_stages[0].start_date
@@ -109,7 +102,6 @@ def get_chart_data_for_user(user):
     daily_efficiency_map = {d.log_date: d.efficiency for d in
                             DailyData.query.join(Stage).filter(Stage.user_id == user.id).all()}
     daily_efficiencies = [daily_efficiency_map.get(d) for d in date_range]
-
     weekly_data = collections.defaultdict(lambda: {'duration': 0, 'efficiency': None})
     current_d = first_log_date
     while current_d <= last_log_date:
@@ -120,13 +112,12 @@ def get_chart_data_for_user(user):
     for w_eff in weekly_efficiency_from_db:
         week_start_in_stage = w_eff.stage.start_date + timedelta(weeks=w_eff.week_num - 1)
         global_year, global_week_num = get_custom_week_info(week_start_in_stage, global_start_date)
-        if (global_year, global_week_num) in weekly_data:
-            weekly_data[(global_year, global_week_num)]['efficiency'] = w_eff.efficiency
+        if (global_year, global_week_num) in weekly_data: weekly_data[(global_year, global_week_num)][
+            'efficiency'] = w_eff.efficiency
     sorted_week_keys = sorted(weekly_data.keys())
     weekly_labels = [f"{k[0]}-W{k[1]:02}" for k in sorted_week_keys]
     weekly_durations = [round(weekly_data[k]['duration'] / 60, 2) for k in sorted_week_keys]
     weekly_efficiencies = [weekly_data[k]['efficiency'] for k in sorted_week_keys]
-
     stage_annotations = []
     for stage in all_stages:
         start_g_year, start_g_week = get_custom_week_info(stage.start_date, global_start_date)
@@ -136,24 +127,19 @@ def get_chart_data_for_user(user):
         end_g_year, end_g_week = get_custom_week_info(end_date, global_start_date)
         stage_annotations.append({'name': stage.name, 'start_week_label': f"{start_g_year}-W{start_g_week:02}",
                                   'end_week_label': f"{end_g_year}-W{end_g_week:02}"})
-
-    return {
-        'kpis': kpis,
-        'stage_annotations': stage_annotations,
-        'has_data': True,
-        'weekly_duration_data': {'labels': weekly_labels, 'actuals': weekly_durations,
-                                 'trends': _calculate_sma(weekly_durations, 3)},
-        'weekly_efficiency_data': {'labels': weekly_labels, 'actuals': weekly_efficiencies,
-                                   'trends': _calculate_sma(weekly_efficiencies, 3)},
-        'daily_duration_data': {'labels': daily_labels, 'actuals': daily_durations,
-                                'trends': _calculate_sma(daily_durations, 7)},
-        'daily_efficiency_data': {'labels': daily_labels, 'actuals': daily_efficiencies,
-                                  'trends': _calculate_sma(daily_efficiencies, 7)}
-    }, False
+    return {'kpis': kpis, 'stage_annotations': stage_annotations, 'has_data': True,
+            'weekly_duration_data': {'labels': weekly_labels, 'actuals': weekly_durations,
+                                     'trends': _calculate_sma(weekly_durations, 3)},
+            'weekly_efficiency_data': {'labels': weekly_labels, 'actuals': weekly_efficiencies,
+                                       'trends': _calculate_sma(weekly_efficiencies, 3)},
+            'daily_duration_data': {'labels': daily_labels, 'actuals': daily_durations,
+                                    'trends': _calculate_sma(daily_durations, 7)},
+            'daily_efficiency_data': {'labels': daily_labels, 'actuals': daily_efficiencies,
+                                      'trends': _calculate_sma(daily_efficiencies, 7)}}, False
 
 
 def get_category_chart_data(user, stage_id=None):
-    # 此数据获取函数保持不变
+    # ... (code is unchanged)
     query = db.session.query(Category.name, SubCategory.name, func.sum(LogEntry.actual_duration)).join(SubCategory,
                                                                                                        LogEntry.subcategory_id == SubCategory.id).join(
         Category, SubCategory.category_id == Category.id).filter(Category.user_id == user.id).group_by(Category.name,
@@ -166,37 +152,23 @@ def get_category_chart_data(user, stage_id=None):
         duration_hours = (duration or 0) / 60.0
         category_data[cat_name]['total'] += duration_hours
         category_data[cat_name]['subs'].append({'name': sub_name, 'duration': round(duration_hours, 2)})
-
     sorted_categories = sorted(category_data.items(), key=lambda item: item[1]['total'], reverse=True)
-
     main_labels = [item[0] for item in sorted_categories]
     main_data = [round(item[1]['total'], 2) for item in sorted_categories]
-
-    sub_data = {
-        cat_name: {
-            'labels': [sub['name'] for sub in sorted(cat_info['subs'], key=lambda x: x['duration'], reverse=True)],
-            'data': [sub['duration'] for sub in sorted(cat_info['subs'], key=lambda x: x['duration'], reverse=True)]
-        } for cat_name, cat_info in sorted_categories
-    }
-
+    sub_data = {cat_name: {
+        'labels': [sub['name'] for sub in sorted(cat_info['subs'], key=lambda x: x['duration'], reverse=True)],
+        'data': [sub['duration'] for sub in sorted(cat_info['subs'], key=lambda x: x['duration'], reverse=True)]} for
+                cat_name, cat_info in sorted_categories}
     return {'main': {'labels': main_labels, 'data': main_data}, 'drilldown': sub_data}
 
 
 def export_all_charts_as_images(user):
-    """
-    生成包含所有趋势图表和完整分类图表（含子图）的两张美化后的图片。
-    """
+    # ... (code is unchanged)
     trend_data, _ = get_chart_data_for_user(user)
     category_data = get_category_chart_data(user, stage_id=None)
-
-    if not trend_data.get('has_data'):
-        return None
-
-    # --- 1. 生成趋势图表图片 ---
+    if not trend_data.get('has_data'): return None
     fig_trends, axes_trends = plt.subplots(2, 2, figsize=(20, 14), dpi=120)
     fig_trends.suptitle(f'{user.username} 的学习趋势总览', fontsize=24, weight='bold', y=0.98)
-
-    # a. 每周时长
     ax1 = axes_trends[0, 0]
     weekly_duration = trend_data['weekly_duration_data']
     ax1.bar(weekly_duration['labels'], weekly_duration['actuals'], label='实际时长 (小时)',
@@ -209,8 +181,6 @@ def export_all_charts_as_images(user):
     ax1.set_title('每周学习时长', fontsize=16, weight='bold')
     ax1.tick_params(axis='x', rotation=45, labelsize=10)
     ax1.legend()
-
-    # b. 每周效率
     ax2 = axes_trends[0, 1]
     weekly_efficiency = trend_data['weekly_efficiency_data']
     eff_y = np.array(weekly_efficiency['actuals'], dtype=float)
@@ -226,11 +196,8 @@ def export_all_charts_as_images(user):
     ax2.set_title('每周学习效率', fontsize=16, weight='bold')
     ax2.tick_params(axis='x', rotation=45, labelsize=10)
     ax2.legend()
-
-    # c. 每日时长
     ax3 = axes_trends[1, 0]
     daily_duration = trend_data['daily_duration_data']
-    # 修正：每日图的线状图应使用不透明的线条颜色
     ax3.plot(daily_duration['labels'], daily_duration['actuals'], label='实际时长 (小时)',
              color=COLORS['duration_line'], alpha=0.5)
     daily_trends_y = np.array(daily_duration['trends'], dtype=float)
@@ -241,11 +208,8 @@ def export_all_charts_as_images(user):
     ax3.set_title('每日学习时长', fontsize=16, weight='bold')
     ax3.set_xticks([])
     ax3.legend()
-
-    # d. 每日效率
     ax4 = axes_trends[1, 1]
     daily_efficiency = trend_data['daily_efficiency_data']
-    # 修正：每日图的线状图应使用不透明的线条颜色
     ax4.plot(daily_efficiency['labels'], daily_efficiency['actuals'], label='实际效率', color=COLORS['efficiency_line'],
              alpha=0.5)
     daily_eff_y = np.array(daily_efficiency['trends'], dtype=float)
@@ -256,14 +220,11 @@ def export_all_charts_as_images(user):
     ax4.set_title('每日学习效率', fontsize=16, weight='bold')
     ax4.set_xticks([])
     ax4.legend()
-
     fig_trends.tight_layout(rect=[0, 0.03, 1, 0.95])
     trends_img_buffer = io.BytesIO()
     fig_trends.savefig(trends_img_buffer, format='png')
     trends_img_buffer.seek(0)
     plt.close(fig_trends)
-
-    # --- 2. 生成分类图表图片 ---
     if not category_data or not category_data['main']['labels']:
         fig_cats, ax = plt.subplots(figsize=(12, 8), dpi=100)
         ax.text(0.5, 0.5, '没有可用于导出的分类数据', ha='center', va='center', fontsize=18)
@@ -271,57 +232,124 @@ def export_all_charts_as_images(user):
     else:
         num_sub_charts = len(category_data['drilldown'])
         figure_height = 8 + (num_sub_charts * 4)
-
         fig_cats = plt.figure(figsize=(12, figure_height), dpi=120)
         gs = fig_cats.add_gridspec(num_sub_charts + 1, 1, height_ratios=[4] + [2] * num_sub_charts)
         fig_cats.suptitle(f'{user.username} 的学习分类总览', fontsize=24, weight='bold')
-
         main_cat_ax = fig_cats.add_subplot(gs[0, 0])
         main_data = category_data['main']
-        wedges, texts, autotexts = main_cat_ax.pie(
-            main_data['data'],
-            labels=main_data['labels'],
-            autopct='%1.1f%%',
-            startangle=90,
-            pctdistance=0.85,
-            colors=COLORS['category_palette'],
-            wedgeprops=dict(width=0.4, edgecolor='w')
-        )
+        wedges, texts, autotexts = main_cat_ax.pie(main_data['data'], labels=main_data['labels'], autopct='%1.1f%%',
+                                                   startangle=90, pctdistance=0.85, colors=COLORS['category_palette'],
+                                                   wedgeprops=dict(width=0.4, edgecolor='w'))
         plt.setp(autotexts, size=10, weight="bold", color="white")
         main_cat_ax.set_title('主分类时长占比', fontsize=16, weight='bold', pad=20)
         main_cat_ax.axis('equal')
-
         sorted_main_categories = category_data['main']['labels']
-
         for i, cat_name in enumerate(sorted_main_categories):
             sub_data = category_data['drilldown'].get(cat_name)
-            if not sub_data or not sub_data['labels']:
-                continue
-
+            if not sub_data or not sub_data['labels']: continue
             sub_ax = fig_cats.add_subplot(gs[i + 1, 0])
             sub_labels = sub_data['labels']
             sub_values = sub_data['data']
-
             bar_color = COLORS['category_palette'][i % len(COLORS['category_palette'])]
-
             sub_ax.barh(sub_labels, sub_values, color=bar_color, height=0.5)
             sub_ax.set_title(f'“{cat_name}” 分类下的标签详情 (小时)', fontsize=14, weight='bold')
             sub_ax.invert_yaxis()
-
-            for index, value in enumerate(sub_values):
-                sub_ax.text(value, index, f' {value:.1f}h', va='center', fontsize=10)
-
+            for index, value in enumerate(sub_values): sub_ax.text(value, index, f' {value:.1f}h', va='center',
+                                                                   fontsize=10)
             sub_ax.spines['top'].set_visible(False)
             sub_ax.spines['right'].set_visible(False)
             sub_ax.spines['left'].set_visible(False)
-
     fig_cats.tight_layout(rect=[0, 0.03, 1, 0.96])
     category_img_buffer = io.BytesIO()
     fig_cats.savefig(category_img_buffer, format='png')
     category_img_buffer.seek(0)
     plt.close(fig_cats)
+    return {'trends_image': trends_img_buffer, 'category_image': category_img_buffer}
 
-    return {
-        'trends_image': trends_img_buffer,
-        'category_image': category_img_buffer
-    }
+
+# ============================================================================
+# BEAUTIFIED WORDCLOUD FUNCTION
+# ============================================================================
+def generate_wordcloud_for_user(user, stage_id=None, shape='random'):
+    """
+    Generates a beautified word cloud with masks, custom fonts, and colors.
+    """
+    # 1. Fetch and filter notes
+    query = LogEntry.query.join(Stage).filter(Stage.user_id == user.id)
+    if stage_id:
+        query = query.filter(Stage.id == stage_id)
+    notes_list = [log.notes for log in query.all() if log.notes and log.notes.strip()]
+    if not notes_list:
+        return None
+
+    # 2. Load stopwords
+    stopwords_path = os.path.join(current_app.static_folder, 'cn_stopwords.txt')
+    stopwords = set()
+    if os.path.exists(stopwords_path):
+        with open(stopwords_path, 'r', encoding='utf-8') as f:
+            stopwords = {line.strip() for line in f}
+
+    # 3. Process text
+    full_text = ' '.join(notes_list)
+    word_list = jieba.cut(full_text)
+    filtered_words = [word for word in word_list if word not in stopwords and len(word) > 1]
+    if not filtered_words:
+        return None
+    segmented_text = ' '.join(filtered_words)
+
+    # 4. Handle paths
+    font_path = os.path.join(current_app.static_folder, 'fonts', 'MaShanZheng-Regular.ttf')
+    masks_dir = os.path.join(current_app.static_folder, 'images', 'masks')
+    if not os.path.exists(font_path):
+        current_app.logger.error(f"Font file not found: {font_path}")
+        return None
+
+    # 5. Select and load mask
+    mask_image = None
+    try:
+        available_masks = [f for f in os.listdir(masks_dir) if f.endswith('.png')]
+        if not available_masks:
+            raise FileNotFoundError("No mask images found in the masks directory.")
+
+        selected_mask_file = random.choice(available_masks)
+        mask_path = os.path.join(masks_dir, selected_mask_file)
+
+        mask_image = np.array(Image.open(mask_path).convert("RGB"))
+
+    except Exception as e:
+        current_app.logger.error(f"Error loading mask: {e}")
+        mask_image = None
+
+    # 6. Define custom color function
+    def theme_color_func(word, font_size, position, orientation, random_state=None, **kwargs):
+        colors = ["#A78BFA", "#8B5CF6", "#F59E0B", "#B45309", "#4C1D95"]
+        return random.choice(colors)
+
+    # 7. Generate WordCloud
+    try:
+        wordcloud = WordCloud(
+            font_path=font_path,
+            # --- FIX: Standardize canvas size ---
+            width=800,
+            height=800,
+            background_color='rgba(255, 255, 255, 0)',
+            mode='RGBA',
+            mask=mask_image,
+            # contour_width=1,  # Removed to prevent image channel errors
+            # contour_color='#A78BFA', # Removed
+            color_func=theme_color_func,
+            prefer_horizontal=0.9,
+            collocations=False,
+            margin=5,
+            max_words=200
+        ).generate(segmented_text)
+
+        img_buffer = io.BytesIO()
+        wordcloud.to_image().save(img_buffer, format='PNG')
+        img_buffer.seek(0)
+        return img_buffer
+
+    except Exception as e:
+        # Provide more details in the log
+        current_app.logger.error(f"Failed to generate word cloud: {e}", exc_info=True)
+        return None

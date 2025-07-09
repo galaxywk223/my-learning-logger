@@ -177,13 +177,14 @@
         <div class="modal-content"></div>
     </div>
 </div>
-<form id="deleteForm" method="POST" style="display: none;"></form>
+<!--  这个空的 form 标签是给删除按钮用的，但现在我们不再需要它了，因为 CSRF 令牌将通过 JS 添加 -->
+<!-- <form id="deleteForm" method="POST" style="display: none;"></form> -->
 {% endblock %}
 
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function () {
-        // --- Modal Logic (unchanged from your version) ---
+        // --- Modal Logic (unchanged) ---
         const formModal = document.getElementById('formModal');
         if (formModal) {
             formModal.addEventListener('show.bs.modal', function (event) {
@@ -209,40 +210,48 @@
             });
         }
 
-        // --- AJAX Form Submission (unchanged) ---
-        window.submitAjaxForm = function(form) {
-            const formData = new FormData(form);
-            fetch(form.action, {
-                method: 'POST', body: formData, headers: {'X-Requested-With': 'XMLHttpRequest'}
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) { location.reload(); }
-                else {
-                    const errorDiv = form.querySelector('.error-message');
-                    if (errorDiv) {
-                        errorDiv.textContent = data.message || '操作失败，请重试。';
-                        errorDiv.style.display = 'block';
-                    } else { alert("操作失败: " + (data.message || '未知错误')); }
-                }
-            })
-            .catch(err => { console.error('AJAX form submission error:', err); alert('发生网络错误，请稍后重试。'); });
-        }
+        // --- AJAX Form Submission (This function is now in main.js) ---
+        // window.submitAjaxForm = function(form) { ... }
 
-        // --- Delete Confirmation (unchanged) ---
+        // --- Delete Confirmation (MODIFIED) ---
         window.confirmDelete = function(event, logId) {
             event.preventDefault();
             if (confirm('确定要删除这条记录吗？此操作无法撤销。')) {
+                // 新增: 获取 CSRF 令牌
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
                 fetch(`/records/delete/${logId}`, {
-                    method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRFToken': csrfToken // 新增: 在请求头中添加令牌
+                    }
                 })
                 .then(response => response.json())
-                .then(data => { if (data.success) { location.reload(); } else { alert('删除失败: ' + data.message); } })
-                .catch(err => { console.error('Delete error:', err); alert('删除时发生网络错误。'); });
+                .then(data => {
+                    if (data.success) {
+                        location.reload();
+                    } else {
+                        // 使用我们全局的 toast 通知来显示错误
+                        if(typeof showToast === 'function') {
+                            showToast(data.message || '删除失败', 'error');
+                        } else {
+                            alert('删除失败: ' + (data.message || '未知错误'));
+                        }
+                    }
+                })
+                .catch(err => {
+                    console.error('Delete error:', err);
+                    if(typeof showToast === 'function') {
+                        showToast('删除时发生网络错误。', 'error');
+                    } else {
+                        alert('删除时发生网络错误。');
+                    }
+                });
             }
         }
 
-        // --- NEW: Notes Toggle Logic ---
+        // --- Notes Toggle Logic (unchanged) ---
         document.querySelectorAll('.notes-toggle-btn').forEach(button => {
             button.addEventListener('click', function (event) {
                 event.preventDefault();
