@@ -75,6 +75,8 @@
 <div class="card mb-4">
     <div class="card-body">
         <form action="{{ url_for('daily_plan.add_item') }}" method="POST">
+            {# --- 核心修正 --- #}
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="plan_date" value="{{ selected_date.isoformat() }}">
             <div class="input-group">
                 <input type="text" class="form-control" name="content" placeholder="输入新的计划项..." required>
@@ -161,7 +163,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
             fetch(`{{ url_for('daily_plan.toggle_item', item_id=0) }}`.replace('0', itemId), {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
             })
             .then(response => response.json())
             .then(data => {
@@ -181,13 +186,16 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function(e) {
             e.preventDefault();
             if (!confirm('确定要删除这项计划吗？')) return;
-            
+
             const itemId = this.dataset.itemId;
             const itemElement = this.closest('.plan-item');
 
             fetch(`{{ url_for('daily_plan.delete_item', item_id=0) }}`.replace('0', itemId), {
                 method: 'POST',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRF-Token': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
             })
             .then(response => response.json())
             .then(data => {
