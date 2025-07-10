@@ -8,6 +8,7 @@ Create Date: 2025-07-10 10:50:00.000000
 from alembic import op
 import sqlalchemy as sa
 
+
 # revision identifiers, used by Alembic.
 revision = 'fd9a1b2c3e4f'
 down_revision = 'ce12d6fcae15'
@@ -20,7 +21,6 @@ TABLES_WITH_SEQUENCES = [
     'countdown_event', 'motto', 'todo', 'category', 'sub_category',
     'milestone_category', 'milestone', 'milestone_attachment', 'daily_plan_item'
 ]
-
 
 def upgrade():
     """
@@ -37,16 +37,21 @@ def upgrade():
                 # The sequence name is typically table_name + '_id_seq'
                 sequence_name = f"{table_name}_id_seq"
 
-                # This SQL command resets the sequence.
-                # It sets the next value to the current maximum id in the table.
-                # COALESCE handles cases where the table is empty, setting the sequence to 1.
-                # The second argument `max(id) IS NOT NULL` in setval tells postgres
-                # that the next value is indeed the one we provided, not one after it.
-                op.execute(
-                    f"SELECT setval('{sequence_name}', COALESCE((SELECT MAX(id) FROM {table_name}), 1), (SELECT MAX(id) FROM {table_name}) IS NOT NULL);")
+                # --- FIX: Add double quotes around the table name ---
+                # This prevents conflicts with SQL reserved keywords like "user".
+                sql_command = f"""
+                    SELECT setval(
+                        '{sequence_name}',
+                        COALESCE((SELECT MAX(id) FROM "{table_name}"), 1),
+                        (SELECT MAX(id) FROM "{table_name}") IS NOT NULL
+                    );
+                """
+                op.execute(sql_command)
                 print(f"  - Sequence '{sequence_name}' for table '{table_name}' has been reset.")
             except Exception as e:
-                print(f"  - Could not reset sequence for table '{table_name}'. Error: {e}")
+                # Catch exceptions on a per-table basis so that one failure
+                # doesn't abort the entire migration transaction.
+                print(f"  - WARNING: Could not reset sequence for table '{table_name}'. Error: {e}")
     else:
         # If not using PostgreSQL (e.g., local SQLite), skip this operation.
         print(f"Skipping sequence reset for non-PostgreSQL dialect: {conn.dialect.name}")
