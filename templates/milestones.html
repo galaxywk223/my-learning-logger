@@ -76,13 +76,53 @@
     .timeline-attachments {
         margin-top: 1rem;
     }
-    .attachment-badge {
+
+    /* --- MODIFIED FOR ATTACHMENT DELETION --- */
+    .attachment-item {
         display: inline-flex;
         align-items: center;
-        gap: 0.5rem;
-        text-decoration: none;
+        background-color: #e9ecef;
+        border-radius: 50rem;
+        padding: 0.25rem 0.25rem 0.25rem 0.75rem;
         margin-right: 0.5rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+        transition: background-color 0.2s ease;
     }
+    .attachment-item:hover {
+        background-color: #dee2e6;
+    }
+    .attachment-link {
+        color: #495057;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+    }
+    .attachment-delete-btn {
+        background: #6c757d;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-left: 0.5rem;
+        padding: 0;
+        line-height: 1;
+        opacity: 0.6;
+        transition: opacity 0.2s ease;
+    }
+    .attachment-delete-btn:hover {
+        opacity: 1;
+    }
+    .attachment-delete-btn .lucide {
+        width: 12px;
+        height: 12px;
+    }
+
 </style>
 
 <div class="page-header d-flex justify-content-between align-items-center mb-4 flex-wrap">
@@ -152,19 +192,25 @@
                         </div>
                     </div>
                     <div class="timeline-description">
-                        {# --- MODIFIED: Added the |safe filter --- #}
                         {{ milestone.description|safe if milestone.description else '<p class="text-muted">没有详细描述。</p>'|safe }}
                     </div>
 
                     {% if milestone.attachments.all() %}
                     <div class="timeline-attachments border-top pt-3 mt-3">
                         <h6 class="card-subtitle mb-2 text-muted">附件:</h6>
+
                         {% for attachment in milestone.attachments %}
-                        <a href="{{ url_for('milestone.get_attachment', filepath=attachment.file_path) }}" class="badge text-bg-secondary attachment-badge">
-                            <i data-lucide="image"></i>
-                            <span>{{ attachment.original_filename }}</span>
-                        </a>
+                        <div class="attachment-item" id="attachment-{{ attachment.id }}">
+                            <a href="{{ url_for('milestone.get_attachment', filepath=attachment.file_path) }}" target="_blank" class="attachment-link">
+                                <i data-lucide="image" style="width:16px; height:16px;"></i>
+                                <span>{{ attachment.original_filename }}</span>
+                            </a>
+                            <button class="attachment-delete-btn" data-attachment-id="{{ attachment.id }}" title="删除此附件">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
                         {% endfor %}
+
                     </div>
                     {% endif %}
                 </div>
@@ -214,14 +260,13 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    // Logic to populate modal for editing
+    // Logic to populate modal for editing (existing code)
     const formModal = document.getElementById('milestoneFormModal');
     formModal.addEventListener('show.bs.modal', function (event) {
         const button = event.relatedTarget;
         const form = formModal.querySelector('form');
         const modalTitle = formModal.querySelector('.modal-title');
 
-        // Get data attributes from the button that triggered the modal
         const action = button.dataset.action;
         const title = button.dataset.title;
         const milestoneTitle = button.dataset.milestoneTitle || '';
@@ -229,20 +274,57 @@ document.addEventListener('DOMContentLoaded', function () {
         const categoryId = button.dataset.categoryId || '';
         const description = button.dataset.description || '';
 
-        // Update the form and modal title
         form.action = action;
         modalTitle.textContent = title;
         form.querySelector('#title').value = milestoneTitle;
         form.querySelector('#event_date').value = eventDate;
         form.querySelector('#category_id').value = categoryId;
-
-        // For rich text editor, you'll need to set its content
-        // This is a placeholder for a simple textarea
         form.querySelector('#description').value = description;
-
-        // Reset file input
         form.querySelector('#attachments').value = '';
     });
+
+    // --- NEW: Logic for deleting a single attachment ---
+    document.querySelectorAll('.attachment-delete-btn').forEach(button => {
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            const attachmentId = this.dataset.attachmentId;
+            const attachmentElement = document.getElementById('attachment-' + attachmentId);
+
+            if (confirm('确定要永久删除这个附件吗？')) {
+                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+                fetch(`/milestones/attachments/delete/${attachmentId}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-Token': csrfToken,
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        // Animate fade out and then remove
+                        attachmentElement.style.transition = 'opacity 0.3s ease';
+                        attachmentElement.style.opacity = '0';
+                        setTimeout(() => {
+                            attachmentElement.remove();
+                        }, 300);
+                        // You can use the global showToast function if available
+                        // showToast(data.message, 'success');
+                    } else {
+                        alert(data.message || '删除失败，请刷新页面后重试。');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error deleting attachment:', error);
+                    alert('删除时发生网络错误。');
+                });
+            }
+        });
+    });
+
+    // Re-initialize lucide icons if new ones were added
+    lucide.createIcons();
 });
 </script>
 {% endblock %}
