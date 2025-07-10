@@ -236,7 +236,11 @@
         <div class="modal-content"></div>
     </div>
 </div>
-<form id="deleteForm" method="POST" style="display: none;"></form>
+{#
+  The delete form is no longer needed here because the global confirmDelete
+  function in main.js will handle it correctly with fetch.
+#}
+{# <form id="deleteForm" method="POST" style="display: none;"></form> #}
 
 {% endblock %}
 
@@ -244,7 +248,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
 
-    // --- NEW: Function to draw progress rings ---
+    // Function to draw progress rings
     function setProgress(cardElement) {
         const percent = parseFloat(cardElement.dataset.progress) || 0;
         const circle = cardElement.querySelector('.progress-ring-circle');
@@ -252,15 +256,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         const radius = circle.r.baseVal.value;
         const circumference = 2 * Math.PI * radius;
-
-        // Use (100 - percent) because we want to show the "remaining" part filled
         const offset = circumference - (percent / 100) * circumference;
 
         circle.style.strokeDasharray = `${circumference} ${circumference}`;
         circle.style.strokeDashoffset = offset;
     }
 
-    // --- NEW: Countdown Timers & Ring Initialization ---
+    // Countdown Timers & Ring Initialization
     const countdownCards = document.querySelectorAll('.countdown-card-new[data-target-time]');
 
     function updateCountdowns() {
@@ -270,7 +272,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const diff = targetTime - now;
 
             if (diff <= 0) {
-                // If a card expires, reload the page to move it to the "expired" section
                 location.reload();
                 return;
             }
@@ -287,17 +288,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // --- Initial Setup ---
+    // Initial Setup
     countdownCards.forEach(card => {
         setProgress(card);
     });
 
     if (countdownCards.length > 0) {
         setInterval(updateCountdowns, 1000);
-        updateCountdowns(); // Run once immediately
+        updateCountdowns();
     }
 
-    // --- Modal & Form Logic (Unchanged) ---
+    // Modal & Form Logic
     const formModal = document.getElementById('formModal');
     if (formModal) {
         formModal.addEventListener('show.bs.modal', function (event) {
@@ -306,49 +307,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 .then(response => response.text())
                 .then(html => {
                     formModal.querySelector('.modal-content').innerHTML = html;
+                    // Re-initialize icons inside the newly loaded modal content
                     lucide.createIcons();
                 });
         });
     }
 
-    window.submitAjaxForm = function(form) {
-        fetch(form.action, {
-            method: form.method,
-            body: new FormData(form),
-            headers: {'X-Requested-With': 'XMLHttpRequest'}
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Ensure the modal is hidden before reloading
-                const modalInstance = bootstrap.Modal.getInstance(formModal);
-                if (modalInstance) {
-                    modalInstance.hide();
-                }
-                // A short delay can help ensure the modal is gone before the reload
-                setTimeout(() => location.reload(), 100);
-            } else {
-                alert('操作失败: ' + (data.message || '未知错误'));
-            }
-        });
-    }
-
-    window.confirmDelete = function(event, eventId) {
-        event.preventDefault();
-        if (confirm('确定要删除这个目标吗？此操作无法撤销。')) {
-            const form = document.getElementById('deleteForm');
-            form.action = `/countdown/delete/${eventId}`;
-            fetch(form.action, {method: 'POST', headers: {'X-Requested-With': 'XMLHttpRequest'}})
-                .then(r => r.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        alert('删除失败: ' + data.message);
-                    }
-                });
-        }
-    }
+    // --- DELETED: The incorrect local definitions of submitAjaxForm and confirmDelete ---
+    // The page will now correctly use the global functions from main.js which include the CSRF token.
 
     // Final check for Lucide icons on the page
     lucide.createIcons();
