@@ -4,6 +4,12 @@
 
 {% block content %}
 <style>
+    /* --- 新增：在这里定义“马善政”字体 --- */
+    @font-face {
+        font-family: 'MaShanZheng';
+        src: url("{{ url_for('static', filename='fonts/MaShanZheng-Regular.ttf') }}") format('truetype');
+    }
+
     .dashboard-card {
         text-decoration: none;
         color: inherit;
@@ -93,7 +99,15 @@
     }
 
     .motto-card { background-color: rgba(255, 255, 255, 0.85); backdrop-filter: blur(5px); border: none; }
-    #random-motto-content { font-size: 1.2rem; font-weight: 500; font-style: italic; color: #374151; min-height: 28px; }
+    /* --- 修改：应用新字体，取消加粗和斜体 --- */
+    #random-motto-content {
+        font-family: 'MaShanZheng', sans-serif;
+        font-size: 1.6rem; /* 调整字体大小以适应新字体 */
+        font-weight: normal; /* 取消加粗 */
+        font-style: normal; /* 取消斜体 */
+        color: #374151;
+        min-height: 28px;
+    }
     #refresh-motto-btn { padding: 0.25rem 0.5rem; font-size: 0.8rem; }
     #refresh-motto-btn .refresh-icon { width: 14px; height: 14px; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
@@ -197,7 +211,8 @@
                 const response = await fetch("{{ url_for('motto.get_random_motto') }}");
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
-                mottoElement.textContent = `“ ${data.content} ”`;
+                /* --- 修改：移除格言两边的引号 --- */
+                mottoElement.textContent = data.content;
             } catch (error) {
                 console.error('Failed to fetch motto:', error);
                 mottoElement.textContent = '无法加载格言，请稍后再试。';
