@@ -34,9 +34,9 @@ class DevelopmentConfig(Config):
 
 
 class ProductionConfig(Config):
-    # --- 核心修正：让生产环境也明确使用 SQLite ---
-    # 这样它就不会去读 .env 文件里那个错误的 postgresql 地址了
-    # 我们为生产环境指定一个独立的数据库文件，以保证数据安全
+    # --- 核心修正：让生产环境优先使用服务器提供的 DATABASE_URL ---
+    # 如果服务器环境变量中没有设置 DATABASE_URL，它才会回退到使用本地的 SQLite 文件。
+    # 这修复了与 Render/Heroku 等平台部署时的数据库连接问题。
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
                               'sqlite:///' + os.path.join(INSTANCE_FOLDER_PATH, 'learning_logs_prod.db')
 
