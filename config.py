@@ -1,34 +1,27 @@
-# config.py (REVISED FOR DEBUGGING)
+# config.py (REVISED FOR PRODUCTION)
 import os
-
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
     MATPLOTLIB_BACKEND = 'Agg'
+    SQLALCHEMY_ECHO = False # In production, this should generally be False
 
-    # --- NEW: Add this line to enable SQL query logging ---
-    SQLALCHEMY_ECHO = True
-
-    # Define the base path for uploads inside the 'static' folder
     UPLOAD_FOLDER_BASE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'uploads')
-
-    # Path for milestone attachments
     MILESTONE_UPLOADS = os.path.join(UPLOAD_FOLDER_BASE, 'milestones')
-
-    # NEW: Path for custom background images
     BACKGROUND_UPLOADS = os.path.join(UPLOAD_FOLDER_BASE, 'backgrounds')
 
     @staticmethod
     def init_app(app):
-        # This method is called by create_app, so it must exist.
-        # We can leave it empty if no special initialization is needed.
-        pass
+        # Create upload directories if they don't exist
+        os.makedirs(app.config['MILESTONE_UPLOADS'], exist_ok=True)
+        os.makedirs(app.config['BACKGROUND_UPLOADS'], exist_ok=True)
 
 
 class DevelopmentConfig(Config):
     DEBUG = True
+    SQLALCHEMY_ECHO = True # Enable query logging for development
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
                               'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance',
                                                           'learning_logs_dev.db')
@@ -41,9 +34,11 @@ class TestingConfig(Config):
 
 
 class ProductionConfig(Config):
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace("postgres://", "postgresql://", 1)
-    # --- IMPORTANT: Ensure logging is off in production ---
-    SQLALCHEMY_ECHO = False
+    # --- 核心修正：让生产环境也使用 SQLite 数据库 ---
+    # 我们直接复用和开发环境一样的逻辑来定位数据库文件。
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL') or \
+                              'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance',
+                                                          'learning_logs_prod.db') # 使用一个不同的文件名以区分
 
 
 config = {
