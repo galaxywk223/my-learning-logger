@@ -10,15 +10,14 @@ const showToast = (message, category = 'info') => {
         return;
     }
 
-    // Map categories to Bootstrap background colors and titles
     const toastInfoMap = {
-        success: { bg: 'bg-success', title: '成功' },
-        danger: { bg: 'bg-danger', title: '错误' }, // Flask uses 'danger' for errors
-        error: { bg: 'bg-danger', title: '错误' },
-        info: { bg: 'bg-primary', title: '提示' },
-        warning: { bg: 'bg-warning', title: '警告' }
+        success: {bg: 'bg-success', title: '成功'},
+        danger: {bg: 'bg-danger', title: '错误'},
+        error: {bg: 'bg-danger', title: '错误'},
+        info: {bg: 'bg-primary', title: '提示'},
+        warning: {bg: 'bg-warning', title: '警告'}
     };
-    const toastInfo = toastInfoMap[category] || { bg: 'bg-secondary', title: '消息' };
+    const toastInfo = toastInfoMap[category] || {bg: 'bg-secondary', title: '消息'};
 
     const toastId = `toast-${Date.now()}`;
     const toastHTML = `
@@ -37,54 +36,81 @@ const showToast = (message, category = 'info') => {
     const toastElement = document.getElementById(toastId);
     const newToast = new bootstrap.Toast(toastElement);
     newToast.show();
-
-    // Clean up the toast from the DOM after it's hidden
-    toastElement.addEventListener('hidden.bs.toast', () => {
-        toastElement.remove();
-    });
+    toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
 };
 
-
 /**
- * Handles the submission of a form via AJAX, showing a toast notification on completion.
+ * NEW & IMPROVED: Handles all AJAX form submissions gracefully.
+ * This function is designed to be more generic.
  * @param {HTMLFormElement} form - The form element being submitted.
- * @param {bootstrap.Modal} [modalInstance] - Optional: The modal instance to hide on success.
- * @param {boolean} [reloadPage=true] - Optional: Whether to reload the page after success.
  */
-const handleAjaxFormSubmit = async (form, modalInstance = null, reloadPage = true) => {
+const handleAjaxFormSubmit = async (form) => {
+    const modalInstance = form.closest('.modal') ? bootstrap.Modal.getInstance(form.closest('.modal')) : null;
+
     try {
         const formData = new FormData(form);
-        const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content'); // 新增: 获取令牌
-
         const response = await fetch(form.action, {
             method: form.method || 'POST',
             body: formData,
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
-                'X-CSRFToken': csrfToken // 新增: 将令牌添加到请求头
+                'X-CSRFToken': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
             }
         });
 
         const result = await response.json();
 
-        if (result.success) {
-            if (modalInstance) {
-                modalInstance.hide();
-            }
-            showToast(result.message, 'success');
+        if (response.ok) {
+            showToast(result.message || '操作成功！', 'success');
 
-            if (reloadPage) {
-                // Delay reload to allow the user to see the toast message
-                setTimeout(() => location.reload(), 1500);
+            if (modalInstance) modalInstance.hide();
+
+            // --- SCENARIO 1: Reload the page ---
+            // The server can ask for a reload by sending { "reload": true }
+            if (result.reload) {
+                setTimeout(() => window.location.reload(), 500);
+                return;
             }
+
+            // --- SCENARIO 2: Inject new HTML content ---
+            // Server sends { "html": "...", "target_container": "#id", "action": "append/prepend" }
+            if (result.html && result.target_container) {
+                const container = document.querySelector(result.target_container);
+                if (container) {
+                    const action = result.action === 'append' ? 'beforeend' : 'afterbegin';
+                    container.insertAdjacentHTML(action, result.html);
+                    lucide.createIcons({ nodes: [container.lastElementChild] });
+                }
+                form.reset(); // Reset form after successful submission
+            }
+
+            // --- SCENARIO 3: Update specific element's text content ---
+            // Server sends { "update_target": "#id", "update_content": "New text" }
+            if (result.update_target && result.update_content) {
+                const targetElement = document.querySelector(result.update_target);
+                if (targetElement) {
+                    targetElement.textContent = result.update_content;
+                }
+            }
+
+            // --- SCENARIO 4: Remove an element from the DOM ---
+            // Server sends { "remove_target": "#id" }
+            if (result.remove_target) {
+                const elementToRemove = document.querySelector(result.remove_target);
+                if (elementToRemove) {
+                    elementToRemove.style.transition = 'opacity 0.3s ease';
+                    elementToRemove.style.opacity = '0';
+                    setTimeout(() => elementToRemove.remove(), 300);
+                }
+            }
+
         } else {
-            // Display error message inside the form or as a toast
+            // Handle server-side validation errors or other failures
+            showToast(result.message || '操作失败，请检查您的输入。', 'error');
             const errorDiv = form.querySelector('.error-message');
             if (errorDiv) {
-                errorDiv.textContent = result.message || '发生未知错误。';
+                errorDiv.textContent = result.message;
                 errorDiv.style.display = 'block';
-            } else {
-                showToast(result.message || '发生未知错误。', 'error');
             }
         }
     } catch (error) {
@@ -93,10 +119,12 @@ const handleAjaxFormSubmit = async (form, modalInstance = null, reloadPage = tru
     }
 };
 
-// --- This is the function that will be attached to form submissions inside modals ---
-// We make it globally available so it can be called from inline `onsubmit` attributes.
-window.submitAjaxForm = (form) => {
-    const modalEl = form.closest('.modal');
-    const modalInstance = modalEl ? bootstrap.Modal.getInstance(modalEl) : null;
-    handleAjaxFormSubmit(form, modalInstance, true);
-};
+// --- Global Event Listener ---
+// We use a single, delegated event listener to handle all our forms.
+document.addEventListener('submit', function(event) {
+    // Check if the submitted form has the 'ajax-form' class
+    if (event.target.matches('form.ajax-form')) {
+        event.preventDefault(); // Prevent the default page reload
+        handleAjaxFormSubmit(event.target);
+    }
+});

@@ -1,14 +1,24 @@
-# config.py (已修复CSRF漏洞)
+# config.py (REVISED FOR DEBUGGING)
 import os
+
 
 class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-    # --- 核心改动 1: 默认启用 CSRF 保护 ---
-    # 将此项从 False 改为 True，确保所有配置默认都是安全的。
     WTF_CSRF_ENABLED = True
     MATPLOTLIB_BACKEND = 'Agg'
-    MILESTONE_UPLOADS = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'uploads/milestones')
+
+    # --- NEW: Add this line to enable SQL query logging ---
+    SQLALCHEMY_ECHO = True
+
+    # Define the base path for uploads inside the 'static' folder
+    UPLOAD_FOLDER_BASE = os.path.join(os.path.abspath(os.path.dirname(__file__)), 'static', 'uploads')
+
+    # Path for milestone attachments
+    MILESTONE_UPLOADS = os.path.join(UPLOAD_FOLDER_BASE, 'milestones')
+
+    # NEW: Path for custom background images
+    BACKGROUND_UPLOADS = os.path.join(UPLOAD_FOLDER_BASE, 'backgrounds')
 
     @staticmethod
     def init_app(app):
@@ -16,21 +26,25 @@ class Config:
         # We can leave it empty if no special initialization is needed.
         pass
 
+
 class DevelopmentConfig(Config):
     DEBUG = True
     SQLALCHEMY_DATABASE_URI = os.environ.get('DEV_DATABASE_URL') or \
-        'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'app-dev.db')
+                              'sqlite:///' + os.path.join(os.path.abspath(os.path.dirname(__file__)), 'instance',
+                                                          'learning_logs_dev.db')
+
 
 class TestingConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
-    # --- 核心改动 2: 仅在测试配置中禁用 CSRF ---
-    # 这对于运行自动化测试是必要的，并且是安全的。
     WTF_CSRF_ENABLED = False
 
+
 class ProductionConfig(Config):
-    # 生产环境将继承 Config 中的 WTF_CSRF_ENABLED = True，这是正确的。
     SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', '').replace("postgres://", "postgresql://", 1)
+    # --- IMPORTANT: Ensure logging is off in production ---
+    SQLALCHEMY_ECHO = False
+
 
 config = {
     'development': DevelopmentConfig,

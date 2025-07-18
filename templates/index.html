@@ -5,38 +5,148 @@
 {% block content %}
 <style>
     /* --- General Page Styles --- */
-    .page-header-records { margin-bottom: 2rem; }
-    .accordion-item { border-color: #E5E7EB; background-color: transparent; border-radius: var(--border-radius-md) !important; overflow: hidden; margin-bottom: 1rem; box-shadow: var(--box-shadow); }
-    .accordion-button { background-color: var(--color-card-bg); font-family: 'Poppins', sans-serif; font-weight: 600; font-size: 1.1rem; color: var(--color-text-dark); }
-    .accordion-button:not(.collapsed) { background-color: var(--color-primary-light); color: var(--color-primary-dark); box-shadow: none; }
-    .accordion-button:focus { box-shadow: none; border-color: var(--color-primary); }
-    .accordion-button::after { filter: invert(40%) sepia(9%) saturate(200%) saturate(135%) hue-rotate(176deg) brightness(96%) contrast(94%); }
-    .accordion-button:not(.collapsed)::after { filter: none; }
-    .accordion-body { padding: 1rem 1.5rem; background-color: #FDFDFD; }
-    .day-card { border: 1px solid #F3F4F6; border-radius: var(--border-radius-md); margin-bottom: 1rem; }
-    .day-card .card-header { background-color: #F9FAFB; font-weight: 500; }
+    .page-header-records {
+        margin-bottom: 2rem;
+    }
+
+    .accordion-item {
+        border-color: #E5E7EB;
+        background-color: transparent;
+        border-radius: var(--border-radius-md) !important;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        box-shadow: var(--box-shadow);
+    }
+
+    .accordion-button {
+        background-color: var(--color-card-bg);
+        font-family: 'Poppins', sans-serif;
+        font-weight: 600;
+        font-size: 1.1rem;
+        color: var(--color-text-dark);
+    }
+
+    .accordion-button:not(.collapsed) {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary-dark);
+        box-shadow: none;
+    }
+
+    .accordion-button:focus {
+        box-shadow: none;
+        border-color: var(--color-primary);
+    }
+
+    .accordion-button::after {
+        filter: invert(40%) sepia(9%) saturate(200%) saturate(135%) hue-rotate(176deg) brightness(96%) contrast(94%);
+    }
+
+    .accordion-button:not(.collapsed)::after {
+        filter: none;
+    }
+
+    .accordion-body {
+        padding: 1rem 1.5rem;
+        background-color: #FDFDFD;
+    }
+
+    .day-card {
+        border: 1px solid #F3F4F6;
+        border-radius: var(--border-radius-md);
+        margin-bottom: 1rem;
+    }
+
+    .day-card .card-header {
+        background-color: #F9FAFB;
+        font-weight: 500;
+    }
 
     /* --- NEW: Daily Progress Bar Styles --- */
-    .daily-progress-container { flex-grow: 1; margin: 0 1rem; }
-    .daily-progress-bar { height: 8px; background-color: #e9ecef; border-radius: 4px; overflow: hidden; }
-    .daily-progress-bar div { height: 100%; background-color: var(--color-primary); transition: width 0.5s ease-out; }
-    .total-duration-text { font-size: 0.8rem; font-weight: bold; color: var(--color-text-medium); }
+    .daily-progress-container {
+        flex-grow: 1;
+        margin: 0 1rem;
+    }
+
+    .daily-progress-bar {
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: 4px;
+        overflow: hidden;
+    }
+
+    .daily-progress-bar div {
+        height: 100%;
+        background-color: var(--color-primary);
+        transition: width 0.5s ease-out;
+    }
+
+    .total-duration-text {
+        font-size: 0.8rem;
+        font-weight: bold;
+        color: var(--color-text-medium);
+    }
 
     /* --- NEW: Quick Add Button Styles --- */
-    .quick-add-btn { padding: 0.2rem 0.5rem; line-height: 1; border-radius: 50%; }
+    .quick-add-btn {
+        padding: 0.2rem 0.5rem;
+        line-height: 1;
+        border-radius: 50%;
+    }
 
     /* --- Log Table Styles --- */
-    .log-table { margin-bottom: 0; table-layout: fixed; width: 100%; }
-    .log-table th { font-weight: 500; color: var(--color-text-medium); font-size: 0.85rem; text-transform: uppercase; padding: 0.75rem; }
-    .log-table td { vertical-align: middle; padding: 0.75rem; }
-    .action-btn { color: var(--color-text-medium); padding: 0.25rem 0.5rem; text-decoration: none; transition: color 0.2s; }
-    .action-btn:hover { color: var(--color-primary); }
-    .action-btn.delete:hover { color: #EF4444; }
-    .action-btn i { width: 18px; height: 18px; }
+    .log-table {
+        margin-bottom: 0;
+        table-layout: fixed;
+        width: 100%;
+    }
+
+    .log-table th {
+        font-weight: 500;
+        color: var(--color-text-medium);
+        font-size: 0.85rem;
+        text-transform: uppercase;
+        padding: 0.75rem;
+    }
+
+    .log-table td {
+        vertical-align: middle;
+        padding: 0.75rem;
+    }
+
+    .action-btn {
+        color: var(--color-text-medium);
+        padding: 0.25rem 0.5rem;
+        text-decoration: none;
+        transition: color 0.2s;
+    }
+
+    .action-btn:hover {
+        color: var(--color-primary);
+    }
+
+    .action-btn.delete:hover {
+        color: #EF4444;
+    }
+
+    .action-btn i {
+        width: 18px;
+        height: 18px;
+    }
 
     /* --- NEW: Task Cell and Category Tag Styles --- */
-    .task-cell { display: flex; align-items: center; gap: 0.75rem; white-space: nowrap; overflow: hidden; }
-    .task-cell strong { text-overflow: ellipsis; overflow: hidden; }
+    .task-cell {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        white-space: nowrap;
+        overflow: hidden;
+    }
+
+    .task-cell strong {
+        text-overflow: ellipsis;
+        overflow: hidden;
+    }
+
     .category-tag {
         display: inline-block;
         padding: 0.2em 0.6em;
@@ -50,17 +160,53 @@
         color: #fff;
         background-color: #6c757d; /* default color */
     }
+
     /* Define some colors for categories. You can add more. */
-    .category-color-1 { background-color: #0d6efd; } /* Blue */
-    .category-color-2 { background-color: #198754; } /* Green */
-    .category-color-3 { background-color: #ffc107; color: #000; } /* Yellow */
-    .category-color-4 { background-color: #dc3545; } /* Red */
-    .category-color-5 { background-color: #6f42c1; } /* Purple */
-    .category-color-0 { background-color: #fd7e14; } /* Orange */
+    .category-color-1 {
+        background-color: #0d6efd;
+    }
+
+    /* Blue */
+    .category-color-2 {
+        background-color: #198754;
+    }
+
+    /* Green */
+    .category-color-3 {
+        background-color: #ffc107;
+        color: #000;
+    }
+
+    /* Yellow */
+    .category-color-4 {
+        background-color: #dc3545;
+    }
+
+    /* Red */
+    .category-color-5 {
+        background-color: #6f42c1;
+    }
+
+    /* Purple */
+    .category-color-0 {
+        background-color: #fd7e14;
+    }
+
+    /* Orange */
 
     /* --- NEW: Note Row Styles --- */
-    .log-notes-row { display: none; } /* Hidden by default */
-    .log-notes-cell { padding-top: 0 !important; border-top: 0 !important; color: #6c757d; font-size: 0.9rem; white-space: normal; }
+    .log-notes-row {
+        display: none;
+    }
+
+    /* Hidden by default */
+    .log-notes-cell {
+        padding-top: 0 !important;
+        border-top: 0 !important;
+        color: #6c757d;
+        font-size: 0.9rem;
+        white-space: normal;
+    }
 </style>
 
 <div class="page-header-records d-flex justify-content-between align-items-center">
@@ -70,10 +216,13 @@
     </div>
     <div class="d-flex align-items-center gap-2">
         <div class="btn-group">
-            <a href="{{ url_for('records.list_records', sort='desc') }}" class="btn btn-sm btn-outline-secondary {% if current_sort == 'desc' %}active{% endif %}">降序</a>
-            <a href="{{ url_for('records.list_records', sort='asc') }}" class="btn btn-sm btn-outline-secondary {% if current_sort == 'asc' %}active{% endif %}">升序</a>
+            <a href="{{ url_for('records.list_records', sort='desc') }}"
+               class="btn btn-sm btn-outline-secondary {% if current_sort == 'desc' %}active{% endif %}">降序</a>
+            <a href="{{ url_for('records.list_records', sort='asc') }}"
+               class="btn btn-sm btn-outline-secondary {% if current_sort == 'asc' %}active{% endif %}">升序</a>
         </div>
-        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal" data-bs-target="#formModal" data-url="{{ url_for('records.get_add_form') }}">
+        <button class="btn btn-primary d-flex align-items-center gap-2" data-bs-toggle="modal"
+                data-bs-target="#formModal" data-url="{{ url_for('records.get_add_form') }}">
             <i data-lucide="plus-circle"></i>
             <span>添加新记录</span>
         </button>
@@ -85,12 +234,14 @@
     {% for week in structured_logs %}
     <div class="accordion-item">
         <h2 class="accordion-header" id="heading-{{ week.year }}-{{ week.week_num }}">
-            <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
+            <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
                 <span class="flex-grow-1 me-3">{{ week.year }} 年 - 第 {{ week.week_num }} 周</span>
                 <span class="badge bg-secondary">周平均效率: {{ week.efficiency|round(1, 'floor') }}</span>
             </button>
         </h2>
-        <div id="collapse-{{ week.year }}-{{ week.week_num }}" class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#weeksAccordion">
+        <div id="collapse-{{ week.year }}-{{ week.week_num }}"
+             class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#weeksAccordion">
             <div class="accordion-body">
                 {% for day in week.days %}
                 <div class="card day-card">
@@ -107,9 +258,11 @@
 
                         <span class="badge bg-info text-dark">日效率: {{ day.efficiency|round(1, 'floor') }}</span>
 
-                        <a href="#" class="btn btn-sm btn-outline-primary quick-add-btn" data-bs-toggle="modal" data-bs-target="#formModal"
-                           data-url="{{ url_for('records.get_add_form', default_date=day.date.isoformat()) }}" title="为今天添加记录">
-                           <i data-lucide="plus" style="width:16px; height:16px;"></i>
+                        <a href="#" class="btn btn-sm btn-outline-primary quick-add-btn" data-bs-toggle="modal"
+                           data-bs-target="#formModal"
+                           data-url="{{ url_for('records.get_add_form', default_date=day.date.isoformat()) }}"
+                           title="为今天添加记录">
+                            <i data-lucide="plus" style="width:16px; height:16px;"></i>
                         </a>
                     </div>
                     <div class="card-body p-0">
@@ -123,39 +276,13 @@
                                 <th style="width: 15%;" class="text-end">操作</th>
                             </tr>
                             </thead>
-                            <tbody>
+                            {# --- 修改部分开始 --- #}
+                            <tbody id="log-table-body-{{ day.date.isoformat() }}">
                             {% for log in day.logs %}
-                            <tr>
-                                <td>
-                                    <div class="task-cell" title="{{ log.task }}">
-                                        {% if log.subcategory %}
-                                        <span class="category-tag category-color-{{ log.subcategory.category_id % 6 }}" title="{{log.subcategory.category.name}}">
-                                            {{ log.subcategory.name }}
-                                        </span>
-                                        {% endif %}
-                                        <strong>{{ log.task }}</strong>
-                                    </div>
-                                </td>
-                                <td>{{ log.time_slot if log.time_slot else 'N/A' }}</td>
-                                <td>{{ log.actual_duration }} 分钟</td>
-                                <td class="text-center">{{ log.mood | mood_emoji if log.mood else '⚪️' }}</td>
-                                <td class="text-end">
-                                    {% if log.notes %}
-                                    <a href="#" class="action-btn notes-toggle-btn" data-target-id="notes-{{ log.id }}" title="查看笔记">
-                                        <i data-lucide="message-square-text"></i>
-                                    </a>
-                                    {% endif %}
-                                    <a href="#" class="action-btn" data-bs-toggle="modal" data-bs-target="#formModal" data-url="{{ url_for('records.get_edit_form', log_id=log.id) }}" title="编辑"><i data-lucide="file-pen-line"></i></a>
-                                    <a href="#" class="action-btn delete" onclick="confirmDelete(event, {{ log.id }})" title="删除"><i data-lucide="trash-2"></i></a>
-                                </td>
-                            </tr>
-                            {% if log.notes %}
-                            <tr class="log-notes-row" id="notes-{{ log.id }}">
-                                <td colspan="5" class="log-notes-cell">{{ log.notes }}</td>
-                            </tr>
-                            {% endif %}
+                            {% include '_log_entry_item.html' %}
                             {% endfor %}
                             </tbody>
+                            {# --- 修改部分结束 --- #}
                         </table>
                     </div>
                 </div>
@@ -214,7 +341,7 @@
         // window.submitAjaxForm = function(form) { ... }
 
         // --- Delete Confirmation (MODIFIED) ---
-        window.confirmDelete = function(event, logId) {
+        window.confirmDelete = function (event, logId) {
             event.preventDefault();
             if (confirm('确定要删除这条记录吗？此操作无法撤销。')) {
                 // 新增: 获取 CSRF 令牌
@@ -227,27 +354,27 @@
                         'X-CSRFToken': csrfToken // 新增: 在请求头中添加令牌
                     }
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        location.reload();
-                    } else {
-                        // 使用我们全局的 toast 通知来显示错误
-                        if(typeof showToast === 'function') {
-                            showToast(data.message || '删除失败', 'error');
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            location.reload();
                         } else {
-                            alert('删除失败: ' + (data.message || '未知错误'));
+                            // 使用我们全局的 toast 通知来显示错误
+                            if (typeof showToast === 'function') {
+                                showToast(data.message || '删除失败', 'error');
+                            } else {
+                                alert('删除失败: ' + (data.message || '未知错误'));
+                            }
                         }
-                    }
-                })
-                .catch(err => {
-                    console.error('Delete error:', err);
-                    if(typeof showToast === 'function') {
-                        showToast('删除时发生网络错误。', 'error');
-                    } else {
-                        alert('删除时发生网络错误。');
-                    }
-                });
+                    })
+                    .catch(err => {
+                        console.error('Delete error:', err);
+                        if (typeof showToast === 'function') {
+                            showToast('删除时发生网络错误。', 'error');
+                        } else {
+                            alert('删除时发生网络错误。');
+                        }
+                    });
             }
         }
 

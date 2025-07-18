@@ -1,7 +1,10 @@
 from flask_wtf import FlaskForm
-from flask_wtf.file import FileField, FileRequired, FileAllowed
-from wtforms import StringField, PasswordField, BooleanField, SubmitField
-from wtforms.validators import DataRequired, Email, EqualTo, ValidationError
+# MODIFIED: Added FileRequired to the import list
+from flask_wtf.file import FileField, FileAllowed, FileRequired
+from wtforms import StringField, PasswordField, BooleanField, SubmitField, RadioField
+from wtforms.validators import DataRequired, Email, EqualTo, ValidationError, Optional
+
+
 from .models import User
 
 class LoginForm(FlaskForm):
@@ -32,7 +35,6 @@ class RegistrationForm(FlaskForm):
         if user is not None:
             raise ValidationError('该邮箱已被注册，请换一个。')
 
-# --- 新增: 数据导入表单 ---
 class DataImportForm(FlaskForm):
     """数据导入表单，包含文件上传和CSRF保护"""
     file = FileField(
@@ -43,3 +45,29 @@ class DataImportForm(FlaskForm):
         ]
     )
     submit = SubmitField('导入并覆盖')
+
+# --- Form for Appearance Settings ---
+class AppearanceForm(FlaskForm):
+    """外观设置表单"""
+    # --- 核心修改：在这里添加了更多的主题选项 ---
+    theme = RadioField(
+        '主题选择',
+        choices=[
+            ('palette-purple', '默认主题 (宁静紫)'),
+            ('palette-green', '活力绿'),
+            ('palette-blue', '商务蓝'),
+            ('palette-yellow', '暖阳黄'),
+            ('palette-red', '热情红')
+        ],
+        default='palette-purple',
+        validators=[DataRequired()]
+    )
+    background_image = FileField(
+        '自定义背景图片',
+        validators=[
+            Optional(), # This field is optional
+            FileAllowed(['jpg', 'jpeg', 'png', 'gif'], '只允许上传图片文件！')
+        ]
+    )
+    remove_background = BooleanField('移除自定义背景')
+    submit = SubmitField('保存设置')

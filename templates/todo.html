@@ -63,13 +63,13 @@
         </h5>
     </div>
     <div class="card-body">
-        <form action="{{ url_for('todo.add_todo') }}" method="POST">
+        <form action="{{ url_for('todo.add_todo') }}" method="POST" autocomplete="off">
             {# 新增: 为标准表单添加 CSRF 令牌 #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
             <div class="row g-2 align-items-center">
                 <div class="col-lg-6">
                     <label for="content" class="visually-hidden">任务内容</label>
-                    <input type="text" id="content" name="content" class="form-control form-control-lg" placeholder="需要做什么？" required>
+                    <input type="text" id="content" name="content" class="form-control form-control-lg" required>
                 </div>
                 <div class="col-lg-2">
                      <label for="due_date" class="visually-hidden">截止日期</label>

@@ -74,12 +74,12 @@
 
 <div class="card mb-4">
     <div class="card-body">
-        <form action="{{ url_for('daily_plan.add_item') }}" method="POST">
+        <form action="{{ url_for('daily_plan.add_item') }}" method="POST" autocomplete="off">
             {# --- 核心修正 --- #}
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="plan_date" value="{{ selected_date.isoformat() }}">
             <div class="input-group">
-                <input type="text" class="form-control" name="content" placeholder="输入新的计划项..." required>
+                <input type="text" class="form-control" name="content" required>
                 <select class="form-select flex-grow-0" style="width: 8rem;" name="time_slot">
                     <option value="上午">上午</option>
                     <option value="下午">下午</option>

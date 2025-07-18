@@ -6,7 +6,8 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form action="{{ action_url }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);">
+{# --- 核心修正：移除 onsubmit 属性，添加 class="ajax-form" --- #}
+<form action="{{ action_url }}" method="POST" class="ajax-form" autocomplete="off">
     <div class="modal-body">
         <div class="alert alert-danger error-message" style="display: none;"></div>
 

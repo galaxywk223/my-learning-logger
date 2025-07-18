@@ -7,7 +7,7 @@
                 <h5 class="modal-title" id="editTodoModalLabel-{{ todo.id }}">编辑待办事项</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ url_for('todo.edit_todo', todo_id=todo.id) }}">
+            <form method="POST" action="{{ url_for('todo.edit_todo', todo_id=todo.id) }}" autocomplete="off">
                 <div class="modal-body">
                     <div class="mb-3">
                         <label for="content-{{ todo.id }}" class="form-label">内容</label>

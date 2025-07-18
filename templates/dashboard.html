@@ -198,7 +198,6 @@
 {% block scripts %}
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // --- Motto loading logic (unchanged) ---
         const mottoElement = document.getElementById('random-motto-content');
         const refreshBtn = document.getElementById('refresh-motto-btn');
         const refreshIcon = refreshBtn.querySelector('.refresh-icon');
@@ -208,10 +207,10 @@
             refreshIcon.classList.add('animate-spin');
             refreshBtn.disabled = true;
             try {
-                const response = await fetch("{{ url_for('motto.get_random_motto') }}");
+                // --- FIX: Point to the correct, consolidated endpoint ---
+                const response = await fetch("{{ url_for('motto_management.get_random_motto') }}");
                 if (!response.ok) throw new Error('Network response was not ok');
                 const data = await response.json();
-                /* --- 修改：移除格言两边的引号 --- */
                 mottoElement.textContent = data.content;
             } catch (error) {
                 console.error('Failed to fetch motto:', error);

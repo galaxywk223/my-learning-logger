@@ -1,4 +1,4 @@
-# learning_logger/blueprints/milestone.py (MODIFIED FOR ATTACHMENT DELETION)
+# learning_logger/blueprints/milestone.py (MODIFIED TO ALLOW ALL FILE TYPES)
 
 import os
 import bleach
@@ -13,13 +13,17 @@ from ..models import Milestone, MilestoneCategory, MilestoneAttachment
 
 milestone_bp = Blueprint('milestone', __name__)
 
-ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+# REMOVED: The ALLOWED_EXTENSIONS set is no longer needed.
+# ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# This list of allowed HTML tags for the description remains for security.
 ALLOWED_TAGS = ['p', 'b', 'i', 'em', 'strong', 'ul', 'ol', 'li', 'br']
 
 
-def allowed_file(filename):
-    return '.' in filename and \
-        filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+# REMOVED: The allowed_file function is no longer needed as we accept all files.
+# def allowed_file(filename):
+#     return '.' in filename and \
+#         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 # ============================================================================
@@ -82,7 +86,8 @@ def add_milestone():
 
         files = request.files.getlist('attachments')
         for file in files:
-            if file and allowed_file(file.filename):
+            # MODIFIED: Removed the allowed_file() check to accept any file type.
+            if file and file.filename:
                 filename = secure_filename(file.filename)
                 user_upload_folder = os.path.join(current_app.config['MILESTONE_UPLOADS'], str(current_user.id))
                 os.makedirs(user_upload_folder, exist_ok=True)
@@ -123,7 +128,8 @@ def edit_milestone(milestone_id):
         if 'MILESTONE_UPLOADS' in current_app.config:
             files = request.files.getlist('attachments')
             for file in files:
-                if file and allowed_file(file.filename):
+                # MODIFIED: Removed the allowed_file() check to accept any file type.
+                if file and file.filename:
                     filename = secure_filename(file.filename)
                     user_upload_folder = os.path.join(current_app.config['MILESTONE_UPLOADS'], str(current_user.id))
                     os.makedirs(user_upload_folder, exist_ok=True)
@@ -169,7 +175,7 @@ def delete_milestone(milestone_id):
 
 
 # ============================================================================
-# Attachment Routes (NEW DELETE ROUTE ADDED)
+# Attachment Routes
 # ============================================================================
 
 @milestone_bp.route('/attachments/<path:filepath>')
@@ -194,7 +200,8 @@ def get_attachment(filepath):
         return "Forbidden", 403
 
     absolute_path_to_file_dir = os.path.join(upload_dir, user_id_from_path)
-    return send_from_directory(absolute_path_to_file_dir, filename, as_attachment=False)
+    # MODIFIED: Set as_attachment=True to force download for non-image files
+    return send_from_directory(absolute_path_to_file_dir, filename, as_attachment=True)
 
 
 @milestone_bp.route('/attachments/delete/<int:attachment_id>', methods=['POST'])
@@ -202,19 +209,16 @@ def get_attachment(filepath):
 def delete_attachment(attachment_id):
     """处理删除单个附件的请求。"""
     attachment = MilestoneAttachment.query.get_or_404(attachment_id)
-    # 验证该附件是否属于当前登录的用户
     if attachment.milestone.user_id != current_user.id:
         return jsonify({'success': False, 'message': '无权删除此附件'}), 403
 
     try:
-        # 1. 删除物理文件
         upload_dir = current_app.config.get('MILESTONE_UPLOADS')
         if upload_dir:
             full_path = os.path.join(upload_dir, attachment.file_path)
             if os.path.exists(full_path):
                 os.remove(full_path)
 
-        # 2. 从数据库中删除记录
         db.session.delete(attachment)
         db.session.commit()
 

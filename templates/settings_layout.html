@@ -1,6 +1,5 @@
+{# templates/settings_layout.html (REVISED FOR APPEARANCE LINK) #}
 {% extends "base.html" %}
-
-{# 这是所有设置页面的新基础布局。 #}
 
 {% block title %}应用设置{% endblock %}
 
@@ -35,7 +34,6 @@
     .settings-content {
         flex-grow: 1;
     }
-    /* 设置页面卡片的通用样式 */
     .settings-card .card-header {
         display: flex;
         align-items: center;
@@ -65,19 +63,33 @@
                class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_account' %}active{% endif %}">
                 <i data-lucide="user" class="me-2"></i>账户设置
             </a>
-            <a href="{{ url_for('main.settings_content') }}"
-               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_content' %}active{% endif %}">
-                <i data-lucide="layout-list" class="me-2"></i>内容管理
+
+            {# NEW: Link to the Appearance Settings page #}
+            <a href="{{ url_for('main.settings_appearance') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_appearance' %}active{% endif %}">
+                <i data-lucide="palette" class="me-2"></i>外观设置
             </a>
-            <a href="{{ url_for('main.settings_data') }}"
-               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'main.settings_data' %}active{% endif %}">
+
+            <a href="{{ url_for('stage.manage_stages') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'stage.manage_stages' %}active{% endif %}">
+                <i data-lucide="flag" class="me-2"></i>阶段管理
+            </a>
+            <a href="{{ url_for('category_management.manage_categories') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'category_management.manage_categories' %}active{% endif %}">
+                <i data-lucide="folder-kanban" class="me-2"></i>分类管理
+            </a>
+            <a href="{{ url_for('motto_management.manage_mottos') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'motto_management.manage_mottos' %}active{% endif %}">
+                <i data-lucide="quote" class="me-2"></i>格言管理
+            </a>
+            <a href="{{ url_for('records.settings_data') }}"
+               class="list-group-item list-group-item-action nav-link {% if request.endpoint == 'records.settings_data' %}active{% endif %}">
                 <i data-lucide="database" class="me-2"></i>数据管理
             </a>
         </div>
     </aside>
 
     <main class="settings-content">
-        {# 这个块将被子模板填充 #}
         {% block settings_content %}{% endblock %}
     </main>
 </div>
@@ -85,9 +97,7 @@
 
 {% block scripts %}
 <script>
-    // 确保子模板中使用的图标能被渲染
     lucide.createIcons();
 </script>
-{# 修复：使用正确的语法定义一个可选的块 #}
 {% block page_scripts %}{% endblock %}
 {% endblock %}

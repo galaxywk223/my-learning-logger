@@ -1,27 +1,42 @@
-# learning_logger/blueprints/main.py (已优化)
+# learning_logger/blueprints/main.py (REVISED FOR APPEARANCE SETTINGS)
 
 import os
-from flask import (Blueprint, render_template, request, redirect, url_for,
-                   flash, current_app, session)
-from flask_login import login_required, current_user
-from datetime import date, datetime, timedelta
 import pytz
+from datetime import date, datetime
+from flask import (Blueprint, render_template, redirect, url_for, request, flash, current_app)
+from flask_login import login_required, current_user
 from sqlalchemy import func
+from werkzeug.utils import secure_filename
 
 from .. import db
-# 新增: 导入 DataImportForm
-from ..forms import DataImportForm
-from ..models import (Stage, Setting, CountdownEvent, LogEntry, DailyData,
-                    WeeklyData, Motto, Todo, Category, SubCategory, Milestone,
-                    MilestoneCategory, MilestoneAttachment, DailyPlanItem)
+from ..forms import AppearanceForm
+from ..models import (Stage, CountdownEvent, LogEntry, Todo, Milestone, DailyPlanItem, Setting)
 
 main_bp = Blueprint('main', __name__)
+
+
+# --- Helper function to get/set settings ---
+def get_user_setting(key, default=None):
+    setting = Setting.query.filter_by(user_id=current_user.id, key=key).first()
+    return setting.value if setting else default
+
+
+def set_user_setting(key, value):
+    setting = Setting.query.filter_by(user_id=current_user.id, key=key).first()
+    if setting:
+        setting.value = value
+    else:
+        setting = Setting(user_id=current_user.id, key=key, value=value)
+        db.session.add(setting)
+    db.session.commit()
 
 
 @main_bp.route('/')
 @login_required
 def index():
-    # ... (此函数内容不变) ...
+    """
+    Displays the main dashboard with a summary of user's activities.
+    """
     try:
         tz = pytz.timezone('Asia/Shanghai')
         current_hour = datetime.now(tz).hour
@@ -49,10 +64,8 @@ def index():
     ).scalar() or 0
     if today_duration_minutes > 0:
         hours, minutes = divmod(today_duration_minutes, 60)
-        if hours > 0:
-            dashboard_data['records_summary'] = f"今日已记录 {hours} 小时 {minutes} 分钟"
-        else:
-            dashboard_data['records_summary'] = f"今日已记录 {minutes} 分钟"
+        dashboard_data[
+            'records_summary'] = f"今日已记录 {hours} 小时 {minutes} 分钟" if hours > 0 else f"今日已记录 {minutes} 分钟"
 
     now_utc = datetime.now(pytz.utc)
     next_event = CountdownEvent.query.filter(
@@ -63,7 +76,6 @@ def index():
     if next_event:
         if next_event.target_datetime_utc.tzinfo is None:
             next_event.target_datetime_utc = pytz.utc.localize(next_event.target_datetime_utc)
-
         time_diff = next_event.target_datetime_utc - now_utc
         days_remaining = time_diff.days
         if days_remaining >= 0:
@@ -93,168 +105,72 @@ def index():
 @main_bp.route('/settings')
 @login_required
 def settings_redirect():
+    """Redirects from the base /settings URL to the default account page."""
     return redirect(url_for('main.settings_account'))
 
 
 @main_bp.route('/settings/account')
 @login_required
 def settings_account():
+    """Renders the user account settings page."""
     return render_template('settings_account.html')
 
 
-@main_bp.route('/settings/content')
+@main_bp.route('/settings/appearance', methods=['GET', 'POST'])
 @login_required
-def settings_content():
-    user_stages = Stage.query.filter_by(user_id=current_user.id).order_by(Stage.start_date.desc()).all()
-    user_categories = Category.query.filter_by(user_id=current_user.id).order_by(Category.name).all()
-    user_mottos = Motto.query.filter_by(user_id=current_user.id).order_by(Motto.id.desc()).all()
-    return render_template('settings_content.html',
-                           user_stages=user_stages,
-                           categories=user_categories,
-                           mottos=user_mottos)
+def settings_appearance():
+    form = AppearanceForm()
+    upload_folder = current_app.config.get('BACKGROUND_UPLOADS')
+    if not upload_folder:
+        flash('背景图片上传路径未配置，功能受限。', 'warning')
 
-
-@main_bp.route('/settings/data')
-@login_required
-def settings_data():
-    # 修改: 创建表单实例并传递给模板
-    form = DataImportForm()
-    return render_template('settings_data.html', form=form)
-
-
-@main_bp.route('/stages/add', methods=['POST'])
-@login_required
-def add_stage():
-    # ... (此函数内容不变) ...
-    name = request.form.get('name')
-    start_date_str = request.form.get('start_date')
-    if not name or not start_date_str:
-        flash('阶段名称和起始日期均不能为空。', 'error')
-    else:
+    if request.method == 'POST':
         try:
-            start_date = date.fromisoformat(start_date_str)
-            new_stage = Stage(name=name, start_date=start_date, user_id=current_user.id)
-            db.session.add(new_stage)
-            db.session.commit()
-            flash(f'新阶段 "{name}" 已成功创建！', 'success')
+            # --- 核心修改：重构逻辑以处理不同的提交动作 ---
+
+            # 动作1: 用户点击了“移除背景”按钮
+            if 'remove_background' in request.form:
+                set_user_setting('background_image', '')
+                flash('自定义背景已移除。', 'success')
+
+            # 动作2: 用户上传了新文件（自动提交）
+            elif form.background_image.data:
+                if form.background_image.validate(form):
+                    file = form.background_image.data
+                    filename = f"bg_{current_user.id}_{int(datetime.now().timestamp())}{os.path.splitext(file.filename)[1]}"
+                    filename = secure_filename(filename)
+                    user_bg_folder = os.path.join(upload_folder, str(current_user.id))
+                    os.makedirs(user_bg_folder, exist_ok=True)
+                    file.save(os.path.join(user_bg_folder, filename))
+                    relative_path = f"{current_user.id}/{filename}"
+                    set_user_setting('background_image', relative_path)
+                    flash('背景图片已更新。', 'success')
+                else:
+                    for error in form.background_image.errors:
+                        flash(error, 'danger')
+
+            # 动作3: 用户点击了“保存主题设置”按钮
+            elif form.validate():  # 验证表单的其余部分（主要是主题）
+                set_user_setting('theme', form.theme.data)
+                flash('主题设置已保存。', 'success')
+
+            # 如果验证失败，WTForms会自动处理错误，但我们也可以手动flash
+            else:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        flash(f"{form[field].label.text}: {error}", 'danger')
+
         except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"创建阶段时出错: {e}")
-            flash('创建阶段时发生错误。', 'error')
-    return redirect(url_for('main.settings_content'))
+            current_app.logger.error(f"Error updating appearance settings: {e}")
+            flash('更新设置时发生错误。', 'danger')
 
+        return redirect(url_for('main.settings_appearance'))
 
-@main_bp.route('/stages/edit/<int:stage_id>', methods=['POST'])
-@login_required
-def edit_stage(stage_id):
-    # ... (此函数内容不变) ...
-    stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
-    new_name = request.form.get('name')
-    if not new_name:
-        flash('阶段名称不能为空。', 'error')
-    else:
-        try:
-            stage.name = new_name
-            db.session.commit()
-            flash('阶段名称已更新。', 'success')
-        except Exception as e:
-            db.session.rollback()
-            current_app.logger.error(f"编辑阶段 {stage_id} 时出错: {e}")
-            flash('更新阶段名称时发生错误。', 'error')
-    return redirect(url_for('main.settings_content'))
+    # 为GET请求填充表单的当前值
+    form.theme.data = get_user_setting('theme', 'palette-purple')
+    current_settings = {
+        'theme': get_user_setting('theme', 'palette-purple'),
+        'background_image': get_user_setting('background_image')
+    }
 
-
-@main_bp.route('/stages/delete/<int:stage_id>', methods=['POST'])
-@login_required
-def delete_stage(stage_id):
-    # ... (此函数内容不变) ...
-    stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
-    try:
-        # 依赖于 models.py 中定义的 cascade="all, delete-orphan"
-        db.session.delete(stage)
-        db.session.commit()
-        flash(f'阶段 "{stage.name}" 及其所有相关记录已被永久删除。', 'success')
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f"删除阶段 {stage_id} 时出错: {e}")
-        flash('删除阶段时发生错误。', 'error')
-    return redirect(url_for('main.settings_content'))
-
-
-@main_bp.route('/stages/apply/<int:stage_id>', methods=['POST'])
-@login_required
-def apply_stage(stage_id):
-    # ... (此函数内容不变) ...
-    stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
-    session['active_stage_id'] = stage.id
-    flash(f'已切换到阶段：“{stage.name}”', 'success')
-    return redirect(url_for('records.list_records'))
-
-
-# in: my-learning-logger/learning_logger/blueprints/main.py
-
-@main_bp.route('/clear_my_data', methods=['POST'])
-@login_required
-def clear_my_data():
-    try:
-        # 1. 在删除数据库记录前，先删除物理附件文件
-        upload_folder = current_app.config.get('MILESTONE_UPLOADS')
-        if upload_folder:
-            attachments_to_delete = MilestoneAttachment.query.join(Milestone).filter(
-                Milestone.user_id == current_user.id).all()
-            for att in attachments_to_delete:
-                try:
-                    # 拼接文件的完整服务器路径
-                    full_path = os.path.join(upload_folder, att.file_path)
-                    if os.path.exists(full_path):
-                        os.remove(full_path)
-                        current_app.logger.info(f"Deleted attachment file: {full_path}")
-                except Exception as file_err:
-                    # 记录文件删除错误，但继续执行
-                    current_app.logger.error(f"Error while deleting attachment file: {file_err}")
-
-        # 2. 按照正确的依赖顺序，从子表到父表依次删除数据库记录
-
-        # 删除与 Milestone 相关的记录
-        milestone_ids = [m.id for m in Milestone.query.filter_by(user_id=current_user.id).with_entities(Milestone.id)]
-        if milestone_ids:
-            MilestoneAttachment.query.filter(MilestoneAttachment.milestone_id.in_(milestone_ids)).delete(
-                synchronize_session=False)
-
-        Milestone.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        MilestoneCategory.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-
-        # 删除与 Stage 和 Category 相关的子记录
-        stage_ids = [s.id for s in Stage.query.filter_by(user_id=current_user.id).with_entities(Stage.id)]
-        if stage_ids:
-            LogEntry.query.filter(LogEntry.stage_id.in_(stage_ids)).delete(synchronize_session=False)
-            DailyData.query.filter(DailyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
-            WeeklyData.query.filter(WeeklyData.stage_id.in_(stage_ids)).delete(synchronize_session=False)
-
-        category_ids = [c.id for c in Category.query.filter_by(user_id=current_user.id).with_entities(Category.id)]
-        if category_ids:
-            # LogEntry 对 SubCategory 的引用必须先于 SubCategory 被清除
-            # 上一步删除所有 LogEntry 已经解决了这个问题，这里再删除 SubCategory
-            SubCategory.query.filter(SubCategory.category_id.in_(category_ids)).delete(synchronize_session=False)
-
-        # 删除其他独立的顶层记录
-        Motto.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        Todo.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        CountdownEvent.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        Setting.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        DailyPlanItem.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-
-        # 最后删除 Stage 和 Category 这两个父表
-        Category.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-        Stage.query.filter_by(user_id=current_user.id).delete(synchronize_session=False)
-
-        # 提交所有删除操作
-        db.session.commit()
-        flash('您的所有个人数据（包括附件）已被成功清空！', 'success')
-
-    except Exception as e:
-        db.session.rollback()
-        current_app.logger.error(f'为用户 {current_user.id} 清空数据时出错: {e}', exc_info=True)
-        flash(f'清空数据时发生严重错误: {e}', 'error')
-
-    return redirect(url_for('main.settings_account'))
+    return render_template('settings_appearance.html', form=form, current_settings=current_settings)

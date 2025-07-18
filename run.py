@@ -1,4 +1,6 @@
-# run.py
+# run.py (DEFINITIVE DEBUG FIX)
+print("<<<<< HELLO, I AM THE NEW RUN.PY FILE! >>>>>")
+
 import os
 from dotenv import load_dotenv
 from learning_logger import create_app
@@ -6,12 +8,17 @@ from learning_logger import create_app
 # 加载 .env 文件
 load_dotenv()
 
-# 从环境中获取配置名称, Render 默认会将其设置为 'production'
-config_name = os.environ.get('FLASK_ENV', 'production')
+# 为了本地开发的稳定性，我们强制使用 'development' 配置
+config_name = 'development'
+print(f"<<<<< USING CONFIG: {config_name} >>>>>")
 
-# 在文件的顶层创建 app 实例，这样 Gunicorn 才能找到它
+# 创建 app 实例
 app = create_app(config_name)
 
-# 这个 if 语句现在只用于本地开发时直接运行文件
+# 这个 if 语句是本地开发的入口
 if __name__ == '__main__':
-    app.run()
+    # --- 核心修正 ---
+    # 强制 debug=True 来覆盖所有其他设置。
+    # 这将确保应用始终以调试模式运行，从而激活日志记录和自动重载。
+    print("<<<<< FORCING app.run(debug=True) >>>>>")
+    app.run(debug=True)

@@ -6,12 +6,12 @@
     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 </div>
 
-<form id="countdownForm" action="{{ action_url }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);">
+<form id="countdownForm" action="{{ action_url }}" method="POST" onsubmit="event.preventDefault(); submitAjaxForm(this);" autocomplete="off">
     <div class="modal-body">
         <div class="alert alert-danger error-message" style="display: none;"></div>
         <div class="mb-3">
             <label for="title" class="form-label">目标名称</label>
-            <input type="text" class="form-control" id="title" name="title" value="{{ event.title if event else '' }}" placeholder="例如：期末考试" required>
+            <input type="text" class="form-control" id="title" name="title" value="{{ event.title if event else '' }}" required>
         </div>
         <div class="row g-3">
             <div class="col-md-6 mb-3">
