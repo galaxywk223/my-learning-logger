@@ -1,7 +1,8 @@
-# learning_logger/models/learning_models.py (REVISED)
+# my-learning-logger/learning_logger/models/learning_models.py (REVISED)
 
 from .. import db
 from datetime import date
+
 
 class Stage(db.Model):
     __tablename__ = 'stage'
@@ -10,7 +11,6 @@ class Stage(db.Model):
     start_date = db.Column(db.Date, nullable=False, default=date.today)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # --- REVISED: Added cascade options ---
     weekly_data = db.relationship('WeeklyData', backref='stage', lazy='dynamic', cascade="all, delete-orphan")
     daily_data = db.relationship('DailyData', backref='stage', lazy='dynamic', cascade="all, delete-orphan")
     log_entries = db.relationship('LogEntry', backref='stage', lazy='dynamic', cascade="all, delete-orphan")
@@ -28,8 +28,13 @@ class Category(db.Model):
     name = db.Column(db.String(100), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # --- REVISED: Added cascade option ---
     subcategories = db.relationship('SubCategory', backref='category', lazy='dynamic', cascade="all, delete-orphan")
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'user_id': self.user_id}
+
+    # --- END FIX ---
 
     def __repr__(self):
         return f'<Category {self.name}>'
@@ -41,9 +46,13 @@ class SubCategory(db.Model):
     name = db.Column(db.String(100), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
 
-    # This relationship does not need a cascade. When a LogEntry is deleted, the SubCategory should remain.
-    # When deleting a SubCategory manually, it's better to prevent deletion if it's in use.
     log_entries = db.relationship('LogEntry', backref='subcategory', lazy='dynamic')
+
+    # --- ADDED: Also adding to_dict() here for consistency and future use ---
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'category_id': self.category_id}
+
+    # --- END ADDITION ---
 
     def __repr__(self):
         return f'<SubCategory {self.name}>'
@@ -86,7 +95,8 @@ class WeeklyData(db.Model):
     __table_args__ = (db.UniqueConstraint('year', 'week_num', 'stage_id', name='_stage_year_week_uc'),)
 
     def to_dict(self):
-        return {'id': self.id, 'year': self.year, 'week_num': self.week_num, 'efficiency': self.efficiency, 'stage_id': self.stage_id}
+        return {'id': self.id, 'year': self.year, 'week_num': self.week_num, 'efficiency': self.efficiency,
+                'stage_id': self.stage_id}
 
 
 class DailyData(db.Model):
@@ -98,4 +108,5 @@ class DailyData(db.Model):
     __table_args__ = (db.UniqueConstraint('log_date', 'stage_id', name='_stage_log_date_uc'),)
 
     def to_dict(self):
-        return {'id': self.id, 'log_date': self.log_date.isoformat(), 'efficiency': self.efficiency, 'stage_id': self.stage_id}
+        return {'id': self.id, 'log_date': self.log_date.isoformat(), 'efficiency': self.efficiency,
+                'stage_id': self.stage_id}

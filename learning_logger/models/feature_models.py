@@ -1,4 +1,4 @@
-# learning_logger/models/feature_models.py (REVISED)
+# my-learning-logger/learning_logger/models/feature_models.py (FINAL FIX)
 
 from .. import db
 from datetime import date, datetime
@@ -18,8 +18,10 @@ class CountdownEvent(db.Model):
         return {
             'id': self.id,
             'title': self.title,
-            'target_datetime_utc': self.target_datetime_utc.isoformat(),
-            'created_at_utc': self.created_at_utc.isoformat() if self.created_at_utc else None
+            # Ensure datetime objects are converted to ISO format strings for JSON
+            'target_datetime_utc': self.target_datetime_utc.isoformat() if self.target_datetime_utc else None,
+            'created_at_utc': self.created_at_utc.isoformat() if self.created_at_utc else None,
+            'user_id': self.user_id
         }
 
 
@@ -28,6 +30,10 @@ class Motto(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {'id': self.id, 'content': self.content, 'user_id': self.user_id}
 
     def __repr__(self):
         return f'<Motto {self.content[:20]}>'
@@ -44,6 +50,19 @@ class Todo(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'content': self.content,
+            'due_date': self.due_date.isoformat() if self.due_date else None,
+            'priority': self.priority,
+            'is_completed': self.is_completed,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'user_id': self.user_id
+        }
+
     def __repr__(self):
         return f'<Todo {self.content[:20]}>'
 
@@ -54,8 +73,11 @@ class MilestoneCategory(db.Model):
     name = db.Column(db.String(100), nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # --- REVISED: Added cascade option ---
     milestones = db.relationship('Milestone', backref='category', lazy='dynamic', cascade="all, delete-orphan")
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {'id': self.id, 'name': self.name, 'user_id': self.user_id}
 
     def __repr__(self):
         return f'<MilestoneCategory {self.name}>'
@@ -70,8 +92,18 @@ class Milestone(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('milestone_category.id'), nullable=True)
 
-    # --- REVISED: Added cascade option ---
     attachments = db.relationship('MilestoneAttachment', backref='milestone', lazy='dynamic', cascade="all, delete-orphan")
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'title': self.title,
+            'event_date': self.event_date.isoformat() if self.event_date else None,
+            'description': self.description,
+            'user_id': self.user_id,
+            'category_id': self.category_id
+        }
 
     def __repr__(self):
         return f'<Milestone {self.title}>'
@@ -84,6 +116,16 @@ class MilestoneAttachment(db.Model):
     file_path = db.Column(db.String(256), nullable=False)
     original_filename = db.Column(db.String(200), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'milestone_id': self.milestone_id,
+            'file_path': self.file_path,
+            'original_filename': self.original_filename,
+            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
+        }
 
     def __repr__(self):
         return f'<MilestoneAttachment {self.original_filename}>'
@@ -98,6 +140,18 @@ class DailyPlanItem(db.Model):
     is_completed = db.Column(db.Boolean, default=False, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # --- FIX: Added the missing to_dict() method ---
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'plan_date': self.plan_date.isoformat() if self.plan_date else None,
+            'content': self.content,
+            'time_slot': self.time_slot,
+            'is_completed': self.is_completed,
+            'user_id': self.user_id,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
 
     def __repr__(self):
         return f'<DailyPlanItem {self.content[:30]}>'
