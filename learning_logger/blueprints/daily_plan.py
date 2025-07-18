@@ -1,5 +1,4 @@
-# learning_logger/blueprints/daily_plan.py
-
+# 文件路径: learning_logger/blueprints/daily_plan.py
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify, current_app)
 from flask_login import login_required, current_user
@@ -16,20 +15,18 @@ daily_plan_bp = Blueprint('daily_plan', __name__)
 @login_required
 def view_plan():
     """显示指定日期的每日计划页面。"""
-    # 获取查询参数中的日期，如果不存在，则默认为今天
+
     date_str = request.args.get('plan_date', default=date.today().isoformat())
     try:
         selected_date = date.fromisoformat(date_str)
     except (ValueError, TypeError):
         selected_date = date.today()
 
-    # 查询当天的所有计划项
     plan_items_query = DailyPlanItem.query.filter_by(
         user_id=current_user.id,
         plan_date=selected_date
     ).order_by(DailyPlanItem.id.asc())
 
-    # 按时间段分组
     morning_items = plan_items_query.filter(DailyPlanItem.time_slot == '上午').all()
     afternoon_items = plan_items_query.filter(DailyPlanItem.time_slot == '下午').all()
     evening_items = plan_items_query.filter(DailyPlanItem.time_slot == '晚上').all()
@@ -38,7 +35,6 @@ def view_plan():
         (DailyPlanItem.time_slot.notin_(['上午', '下午', '晚上']))
     ).all()
 
-    # 统计完成情况
     total_count = len(morning_items) + len(afternoon_items) + len(evening_items) + len(other_items)
     completed_count = sum(
         1 for item in morning_items + afternoon_items + evening_items + other_items if item.is_completed)
@@ -82,7 +78,6 @@ def add_item():
             current_app.logger.error(f"添加每日计划时出错: {e}")
             flash('添加计划时发生错误。', 'error')
 
-    # 重定向回添加计划的日期页面
     return redirect(url_for('daily_plan.view_plan', plan_date=plan_date_str))
 
 
@@ -94,7 +89,6 @@ def toggle_item(item_id):
     item.is_completed = not item.is_completed
     db.session.commit()
 
-    # 如果是 AJAX 请求，返回 JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         return jsonify({
             'success': True,

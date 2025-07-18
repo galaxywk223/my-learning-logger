@@ -1,8 +1,4 @@
-/**
- * Creates and displays a Bootstrap toast notification.
- * @param {string} message - The message to display.
- * @param {string} category - The category of the message ('success', 'error', 'info', 'warning').
- */
+// 文件路径: static/main.js
 const showToast = (message, category = 'info') => {
     const toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
@@ -39,10 +35,7 @@ const showToast = (message, category = 'info') => {
     toastElement.addEventListener('hidden.bs.toast', () => toastElement.remove());
 };
 
-/**
- * Handles all AJAX form submissions gracefully.
- * @param {HTMLFormElement} form - The form element being submitted.
- */
+
 const handleAjaxFormSubmit = async (form) => {
     const modalInstance = form.closest('.modal') ? bootstrap.Modal.getInstance(form.closest('.modal')) : null;
 
@@ -121,8 +114,8 @@ const handleAjaxFormSubmit = async (form) => {
     }
 };
 
-// --- 全局事件监听器 ---
-document.addEventListener('submit', function(event) {
+
+document.addEventListener('submit', function (event) {
     if (event.target.matches('form.ajax-form')) {
         event.preventDefault();
         handleAjaxFormSubmit(event.target);

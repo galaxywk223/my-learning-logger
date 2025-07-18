@@ -1,5 +1,4 @@
-# my-learning-logger/learning_logger/models/learning_models.py (REVISED)
-
+# 文件路径: learning_logger/models/learning_models.py
 from .. import db
 from datetime import date
 
@@ -30,11 +29,8 @@ class Category(db.Model):
 
     subcategories = db.relationship('SubCategory', backref='category', lazy='dynamic', cascade="all, delete-orphan")
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {'id': self.id, 'name': self.name, 'user_id': self.user_id}
-
-    # --- END FIX ---
 
     def __repr__(self):
         return f'<Category {self.name}>'
@@ -48,11 +44,8 @@ class SubCategory(db.Model):
 
     log_entries = db.relationship('LogEntry', backref='subcategory', lazy='dynamic')
 
-    # --- ADDED: Also adding to_dict() here for consistency and future use ---
     def to_dict(self):
         return {'id': self.id, 'name': self.name, 'category_id': self.category_id}
-
-    # --- END ADDITION ---
 
     def __repr__(self):
         return f'<SubCategory {self.name}>'

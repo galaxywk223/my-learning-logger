@@ -1,5 +1,4 @@
-# learning_logger/blueprints/category.py (REVISED)
-
+# 文件路径: learning_logger/blueprints/category.py
 from flask import (Blueprint, request, redirect, url_for,
                    flash, render_template)
 from flask_login import login_required, current_user
@@ -64,12 +63,10 @@ def add_subcategory():
     name = request.form.get('name')
     category_id = request.form.get('category_id', type=int)
 
-    # MODIFIED: Simplified the validation logic.
-    # We can trust that category_id is provided correctly by the hidden input in our new form.
     if not name or not name.strip():
         flash('标签名称不能为空。', 'error')
     else:
-        # We still check if the category belongs to the current user for security.
+
         parent_category = Category.query.filter_by(id=category_id, user_id=current_user.id).first()
         if not parent_category:
             flash('无效的分类或无权操作。', 'error')

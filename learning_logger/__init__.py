@@ -1,7 +1,6 @@
-# learning_logger/__init__.py (MODIFIED TO FORCE LOGGING)
-
+# 文件路径: learning_logger/__init__.py
 import os
-import logging  # <--- NEW: Import the logging module
+import logging
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
@@ -26,28 +25,23 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
     app.config.from_object(config[config_name])
     config[config_name].init_app(app)
 
-    # --- NEW: Forcefully configure logging ---
-    # This block directly manipulates the logger to ensure output, bypassing file configurations.
     if app.config.get('SQLALCHEMY_ECHO'):
-        # Get the logger for SQLAlchemy's engine
+
         sql_logger = logging.getLogger('sqlalchemy.engine')
-        # Set its level to INFO to capture query statements
+
         sql_logger.setLevel(logging.INFO)
 
-        # Check if it already has handlers to avoid duplicate output
         if not sql_logger.handlers:
-            # Create a handler to write to the console (standard error)
             console_handler = logging.StreamHandler()
-            # Set a formatter for the logs
+
             formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
             console_handler.setFormatter(formatter)
-            # Add the handler to the logger
+
             sql_logger.addHandler(console_handler)
 
         print("=" * 50)
         print("INFO: Logging for 'sqlalchemy.engine' has been programmatically enabled.")
         print("=" * 50)
-    # --- END of new logging configuration ---
 
     db.init_app(app)
     login_manager.init_app(app)
@@ -55,7 +49,7 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
     csrf.init_app(app)
 
     with app.app_context():
-        # --- BLUEPRINT REGISTRATION ---
+
         from .blueprints.main import main_bp
         from .blueprints.records import records_bp
         from .blueprints.charts import charts_bp
@@ -82,13 +76,11 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
         app.register_blueprint(category_management_bp)
         app.register_blueprint(motto_management_bp)
 
-        # --- MODELS & LOGIN MANAGER ---
         from .models import User, Setting
         @login_manager.user_loader
         def load_user(user_id):
             return User.query.get(int(user_id))
 
-        # --- CONTEXT PROCESSOR ---
         @app.context_processor
         def inject_user_settings():
             if current_user.is_authenticated:
@@ -97,7 +89,6 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
                 return dict(user_settings=user_settings)
             return dict(user_settings={})
 
-        # --- TEMPLATE FILTERS ---
         from . import helpers
         helpers.setup_template_filters(app)
 

@@ -1,5 +1,4 @@
-# learning_logger/blueprints/main.py (REVISED FOR APPEARANCE SETTINGS)
-
+# 文件路径: learning_logger/blueprints/main.py
 import os
 import pytz
 from datetime import date, datetime
@@ -15,7 +14,6 @@ from ..models import (Stage, CountdownEvent, LogEntry, Todo, Milestone, DailyPla
 main_bp = Blueprint('main', __name__)
 
 
-# --- Helper function to get/set settings ---
 def get_user_setting(key, default=None):
     setting = Setting.query.filter_by(user_id=current_user.id, key=key).first()
     return setting.value if setting else default
@@ -98,10 +96,6 @@ def index():
     return render_template('dashboard.html', dashboard_data=dashboard_data)
 
 
-# ============================================================================
-# SETTINGS PAGE ROUTES
-# ============================================================================
-
 @main_bp.route('/settings')
 @login_required
 def settings_redirect():
@@ -126,14 +120,12 @@ def settings_appearance():
 
     if request.method == 'POST':
         try:
-            # --- 核心修改：重构逻辑以处理不同的提交动作 ---
 
-            # 动作1: 用户点击了“移除背景”按钮
             if 'remove_background' in request.form:
                 set_user_setting('background_image', '')
                 flash('自定义背景已移除。', 'success')
 
-            # 动作2: 用户上传了新文件（自动提交）
+
             elif form.background_image.data:
                 if form.background_image.validate(form):
                     file = form.background_image.data
@@ -149,12 +141,12 @@ def settings_appearance():
                     for error in form.background_image.errors:
                         flash(error, 'danger')
 
-            # 动作3: 用户点击了“保存主题设置”按钮
-            elif form.validate():  # 验证表单的其余部分（主要是主题）
+
+            elif form.validate():
                 set_user_setting('theme', form.theme.data)
                 flash('主题设置已保存。', 'success')
 
-            # 如果验证失败，WTForms会自动处理错误，但我们也可以手动flash
+
             else:
                 for field, errors in form.errors.items():
                     for error in errors:
@@ -166,7 +158,6 @@ def settings_appearance():
 
         return redirect(url_for('main.settings_appearance'))
 
-    # 为GET请求填充表单的当前值
     form.theme.data = get_user_setting('theme', 'palette-purple')
     current_settings = {
         'theme': get_user_setting('theme', 'palette-purple'),

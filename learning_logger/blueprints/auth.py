@@ -1,9 +1,8 @@
-# learning_logger/blueprints/auth.py (MODIFIED TO ADD PRESET MOTTOS)
-
+# 文件路径: learning_logger/blueprints/auth.py
 from flask import Blueprint, render_template, redirect, url_for, flash, current_app
 from flask_login import login_user, logout_user, login_required
 from .. import db
-# MODIFIED: Import the Motto model
+
 from ..models import User, Motto
 from ..forms import LoginForm, RegistrationForm
 
@@ -15,13 +14,12 @@ def register():
     form = RegistrationForm()
     if form.validate_on_submit():
         try:
-            # --- Create the user ---
+
             user = User(username=form.username.data, email=form.email.data)
             user.set_password(form.password.data)
             db.session.add(user)
-            db.session.flush()  # Use flush to get the user.id before the final commit
+            db.session.flush()
 
-            # --- MODIFICATION: Add preset mottos for the new user ---
             PRESET_MOTTOS = [
                 "书山有路勤为径，学海无涯苦作舟。",
                 "业精于勤，荒于嬉；行成于思，毁于随。",
@@ -35,13 +33,13 @@ def register():
                 motto = Motto(content=content, user_id=user.id)
                 db.session.add(motto)
 
-            db.session.commit()  # Commit both the new user and their mottos
+            db.session.commit()
 
             flash('恭喜，您已成功注册！现在可以登录了。', 'success')
             return redirect(url_for('auth.login'))
 
         except Exception as e:
-            # If anything goes wrong, roll back the entire transaction
+
             db.session.rollback()
             current_app.logger.error(f"Error during registration: {e}")
             flash('注册过程中发生错误，请重试。', 'danger')

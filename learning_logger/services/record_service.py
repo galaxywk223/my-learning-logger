@@ -1,4 +1,4 @@
-# learning_logger/services/record_service.py (MODIFIED FOR INCREMENTAL EFFICIENCY UPDATES)
+# 文件路径: learning_logger/services/record_service.py
 import math
 from datetime import date, timedelta
 from itertools import groupby
@@ -8,7 +8,6 @@ from ..models import Stage, LogEntry, WeeklyData, DailyData, Category, SubCatego
 from ..helpers import get_custom_week_info
 
 
-# --- Private Calculation Engine (This part is unchanged) ---
 def _calculate_daily_efficiency_score(log_date, stage_id):
     """
     按“方案C：对数加权模型”计算每日效率分。
@@ -48,33 +47,26 @@ def _get_or_create_weekly_data(year, week_num, stage_id, score):
     weekly_data.efficiency = score
 
 
-# --- START OF MODIFICATIONS ---
-
-# --- NEW: Incremental Update Function ---
 def update_efficiency_for_date(log_date, stage):
     """
     Incrementally updates the efficiency score for a specific date and its corresponding week.
     This is much faster than recalculating the entire stage.
     """
     try:
-        # 1. Update daily efficiency
+
         daily_score = _calculate_daily_efficiency_score(log_date, stage.id)
         _get_or_create_daily_data(log_date, stage.id, daily_score)
 
-        # 2. Update weekly efficiency
         year, week_num = get_custom_week_info(log_date, stage.start_date)
 
-        # Find the date range for the affected week
         week_start_date = stage.start_date + timedelta(weeks=week_num - 1)
         week_end_date = week_start_date + timedelta(days=6)
 
-        # Get all daily scores for that week
         daily_scores_for_week = db.session.query(DailyData.efficiency).filter(
             DailyData.stage_id == stage.id,
             DailyData.log_date.between(week_start_date, week_end_date)
         ).all()
 
-        # Calculate the new weekly average
         total_score = sum(item[0] for item in daily_scores_for_week if item[0] is not None)
         count = len(daily_scores_for_week)
         average_score = total_score / count if count > 0 else 0.0
@@ -89,7 +81,6 @@ def update_efficiency_for_date(log_date, stage):
         current_app.logger.error(f"Error in update_efficiency_for_date for date '{log_date}': {e}", exc_info=True)
 
 
-# --- KEPT FOR BULK IMPORT: The old, slow recalculation function ---
 def recalculate_efficiency_for_stage(stage):
     try:
         all_logs = stage.log_entries.all()
@@ -134,7 +125,6 @@ def recalculate_efficiency_for_stage(stage):
                                  exc_info=True)
 
 
-# --- Read-Only Display Service (Unchanged) ---
 def get_structured_logs_for_stage(stage, sort_order='desc'):
     is_reverse = (sort_order == 'desc')
     all_logs = stage.log_entries.order_by(LogEntry.log_date.asc(), LogEntry.id.asc()).all()
@@ -158,12 +148,11 @@ def get_structured_logs_for_stage(stage, sort_order='desc'):
     return sorted(structured_logs, key=lambda w: (w['year'], w['week_num']), reverse=is_reverse)
 
 
-# --- Data Modification Functions (MODIFIED to use incremental updates) ---
 def add_log_for_stage(stage_id, user, form_data):
     stage = Stage.query.filter_by(id=stage_id, user_id=user.id).first()
-    # --- 修改部分开始 ---
+
     if not stage: return False, "指定的阶段不存在或无权访问。", None
-    # --- 修改部分结束 ---
+
     try:
         subcategory_id = form_data.get('subcategory_id', type=int)
         if subcategory_id:
@@ -184,22 +173,20 @@ def add_log_for_stage(stage_id, user, form_data):
                            mood=form_data.get('mood', type=int),
                            subcategory_id=subcategory_id)
         db.session.add(new_log)
-        # --- 修改部分开始 ---
-        db.session.flush()  # 使用 flush 来提前获取 new_log.id，但先不提交事务
-        new_log_id = new_log.id  # 获取新记录的ID
-        db.session.commit()  # 在这里提交事务
+
+        db.session.flush()
+        new_log_id = new_log.id
+        db.session.commit()
 
         update_efficiency_for_date(new_log.log_date, stage)
 
-        # 返回新记录的ID
         return True, '新纪录添加成功！', new_log_id
-        # --- 修改部分结束 ---
+
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Add log error: {e}", exc_info=True)
-        # --- 修改部分开始 ---
+
         return False, f'发生错误: {e}', None
-        # --- 修改部分结束 ---
 
 
 def update_log_for_user(log_id, user, form_data):
@@ -208,7 +195,6 @@ def update_log_for_user(log_id, user, form_data):
     try:
         stage = log.stage
 
-        # Store the old date to check if it has changed
         old_date = log.log_date
         new_date = date.fromisoformat(form_data.get('log_date'))
 
@@ -234,9 +220,8 @@ def update_log_for_user(log_id, user, form_data):
 
         db.session.commit()
 
-        # MODIFIED: Call incremental update for the new date
         update_efficiency_for_date(new_date, stage)
-        # If the date was changed, also update the old date
+
         if old_date != new_date:
             update_efficiency_for_date(old_date, stage)
 
@@ -252,13 +237,12 @@ def delete_log_for_user(log_id, user):
     if not log: return False, '未找到要删除的记录或无权访问。'
     try:
         stage = log.stage
-        # Store the date before deleting the log
+
         date_to_update = log.log_date
 
         db.session.delete(log)
         db.session.commit()
 
-        # MODIFIED: Call incremental update for the affected date
         update_efficiency_for_date(date_to_update, stage)
         return True, '记录已删除。'
     except Exception as e:
@@ -266,8 +250,6 @@ def delete_log_for_user(log_id, user):
         current_app.logger.error(f"Delete log error: {e}", exc_info=True)
         return False, f'删除时发生错误: {e}'
 
-
-# --- END OF MODIFICATIONS ---
 
 def get_log_entry_for_user(log_id, user):
     return LogEntry.query.join(Stage).filter(Stage.user_id == user.id, LogEntry.id == log_id).first()

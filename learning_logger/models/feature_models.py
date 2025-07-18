@@ -1,7 +1,7 @@
-# my-learning-logger/learning_logger/models/feature_models.py (FINAL FIX)
-
+# 文件路径: learning_logger/models/feature_models.py
 from .. import db
 from datetime import date, datetime
+
 
 class CountdownEvent(db.Model):
     __tablename__ = 'countdown_event'
@@ -18,7 +18,7 @@ class CountdownEvent(db.Model):
         return {
             'id': self.id,
             'title': self.title,
-            # Ensure datetime objects are converted to ISO format strings for JSON
+
             'target_datetime_utc': self.target_datetime_utc.isoformat() if self.target_datetime_utc else None,
             'created_at_utc': self.created_at_utc.isoformat() if self.created_at_utc else None,
             'user_id': self.user_id
@@ -31,7 +31,6 @@ class Motto(db.Model):
     content = db.Column(db.Text, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {'id': self.id, 'content': self.content, 'user_id': self.user_id}
 
@@ -50,7 +49,6 @@ class Todo(db.Model):
     completed_at = db.Column(db.DateTime, nullable=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {
             'id': self.id,
@@ -75,7 +73,6 @@ class MilestoneCategory(db.Model):
 
     milestones = db.relationship('Milestone', backref='category', lazy='dynamic', cascade="all, delete-orphan")
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {'id': self.id, 'name': self.name, 'user_id': self.user_id}
 
@@ -92,9 +89,9 @@ class Milestone(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('milestone_category.id'), nullable=True)
 
-    attachments = db.relationship('MilestoneAttachment', backref='milestone', lazy='dynamic', cascade="all, delete-orphan")
+    attachments = db.relationship('MilestoneAttachment', backref='milestone', lazy='dynamic',
+                                  cascade="all, delete-orphan")
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {
             'id': self.id,
@@ -117,7 +114,6 @@ class MilestoneAttachment(db.Model):
     original_filename = db.Column(db.String(200), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {
             'id': self.id,
@@ -141,7 +137,6 @@ class DailyPlanItem(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # --- FIX: Added the missing to_dict() method ---
     def to_dict(self):
         return {
             'id': self.id,

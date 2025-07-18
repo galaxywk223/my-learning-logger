@@ -1,5 +1,4 @@
-# learning_logger/blueprints/records.py (FINAL - WITH SMART DELETE & EFFICIENCY UPDATE)
-
+# 文件路径: learning_logger/blueprints/records.py
 import os
 import sys
 from datetime import date
@@ -215,13 +214,11 @@ def settings_data():
 @records_bp.route('/export/zip')
 @login_required
 def export_zip():
-    # 这里的调用现在可以正常工作了
     zip_buffer = data_service.export_data_for_user(current_user)
     username = current_user.username.replace(" ", "_")
     filename = f"{username}_backup_{date.today().isoformat()}.zip"
     return Response(zip_buffer, mimetype="application/zip",
                     headers={"Content-Disposition": f"attachment;filename={filename}"})
-
 
 
 @records_bp.route('/import/zip', methods=['POST'])

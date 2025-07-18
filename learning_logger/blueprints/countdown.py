@@ -1,5 +1,4 @@
-# learning_logger/blueprints/countdown.py (FIXED FOR DATA COMPATIBILITY)
-
+# 文件路径: learning_logger/blueprints/countdown.py
 from datetime import date, datetime
 import pytz
 
@@ -21,11 +20,9 @@ BEIJING_TZ = pytz.timezone('Asia/Shanghai')
 def list_events():
     """
     显示当前用户的所有倒计时事件的列表。
-    【已修复】兼容没有创建日期的旧数据。
     """
     now_utc = datetime.now(pytz.utc)
 
-    # --- 修复：移除 isnot(None) 的过滤，查询所有事件 ---
     all_events = CountdownEvent.query.filter_by(
         user_id=current_user.id
     ).order_by(CountdownEvent.target_datetime_utc.asc()).all()
@@ -60,9 +57,8 @@ def list_events():
         else:
             event.is_expired = False
 
-            # --- 修复：检查旧数据 ---
             if event.created_at_utc:
-                # 对于新数据，正常计算
+
                 if event.created_at_utc.tzinfo is None:
                     event.created_at_utc = pytz.utc.localize(event.created_at_utc)
 
@@ -83,7 +79,7 @@ def list_events():
                 else:
                     event.card_status = 'normal'
             else:
-                # 对于没有创建日期的旧数据，提供一个安全的默认值
+
                 event.progress_percentage = 0
                 event.card_status = 'normal'
 
@@ -99,7 +95,6 @@ def list_events():
     )
 
 
-# ... 其他路由 (get_add_form, edit, delete 等) 保持不变 ...
 @countdown_bp.route('/form/add')
 @login_required
 def get_add_form():

@@ -1,5 +1,4 @@
-# learning_logger/blueprints/charts.py (REFACTORED)
-
+# 文件路径: learning_logger/blueprints/charts.py
 import io
 import zipfile
 from datetime import date
@@ -9,7 +8,6 @@ from flask import (Blueprint, render_template, jsonify, Response, flash,
 from flask_login import login_required, current_user
 import numpy as np
 
-# --- 修改: 引入新的、职责分离的服务 ---
 from ..services import chart_service, chart_plotter, wordcloud_service
 from ..models import Stage
 
@@ -42,7 +40,6 @@ def get_chart_data():
     chart_data, _ = chart_service.get_chart_data_for_user(current_user)
     cleaned_chart_data = clean_nan_for_json(chart_data)
 
-    # 格式化平均每日时长
     if cleaned_chart_data.get('kpis') and 'avg_daily_minutes' in cleaned_chart_data['kpis']:
         raw_minutes = cleaned_chart_data['kpis']['avg_daily_minutes']
         hours, minutes = divmod(int(raw_minutes or 0), 60)
@@ -61,13 +58,12 @@ def get_wordcloud_image():
     else:
         stage_id = None
 
-    # --- 修改: 调用新的 wordcloud_service ---
     img_buffer = wordcloud_service.generate_wordcloud_for_user(current_user, stage_id=stage_id)
 
     if img_buffer:
         return Response(img_buffer.getvalue(), mimetype='image/png')
     else:
-        # 如果没有内容生成词云，返回 204 No Content
+
         return '', 204
 
 
@@ -79,7 +75,7 @@ def export_charts():
     此函数现在调用新的、分离的服务。
     """
     try:
-        # 1. 分别获取趋势数据和分类数据
+
         trend_data, _ = chart_service.get_chart_data_for_user(current_user)
         category_data = chart_service.get_category_chart_data(current_user)
 
@@ -87,11 +83,9 @@ def export_charts():
             flash('没有可供导出的图表数据。', 'warning')
             return redirect(url_for('charts.chart_page'))
 
-        # 2. 分别调用绘图服务来生成图片
         trends_image_buffer = chart_plotter.export_trends_image(current_user.username, trend_data)
         category_image_buffer = chart_plotter.export_category_image(current_user.username, category_data)
 
-        # 3. 将生成的图片打包成 ZIP
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
             if trends_image_buffer:

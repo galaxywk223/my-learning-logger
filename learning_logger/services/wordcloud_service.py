@@ -1,5 +1,4 @@
-# learning_logger/services/wordcloud_service.py (NEW FILE)
-
+# 文件路径: learning_logger/services/wordcloud_service.py
 import io
 import os
 import random
@@ -51,7 +50,7 @@ def generate_wordcloud_for_user(user, stage_id=None):
     :param stage_id: (可选) 要筛选的阶段ID。
     :return: 包含PNG图片的BytesIO缓冲，如果没有内容则返回None。
     """
-    # 1. 获取笔记文本
+
     query = LogEntry.query.join(Stage).filter(Stage.user_id == user.id)
     if stage_id:
         query = query.filter(Stage.id == stage_id)
@@ -59,7 +58,6 @@ def generate_wordcloud_for_user(user, stage_id=None):
     if not notes_list:
         return None
 
-    # 2. 文本处理
     stopwords = _load_stopwords()
     full_text = ' '.join(notes_list)
     word_list = jieba.cut(full_text)
@@ -68,7 +66,6 @@ def generate_wordcloud_for_user(user, stage_id=None):
         return None
     segmented_text = ' '.join(filtered_words)
 
-    # 3. 获取资源路径和遮罩
     font_path = os.path.join(current_app.static_folder, 'fonts', 'MaShanZheng-Regular.ttf')
     if not os.path.exists(font_path):
         current_app.logger.error(f"Font file not found: {font_path}")
@@ -76,7 +73,6 @@ def generate_wordcloud_for_user(user, stage_id=None):
 
     mask_image = _get_mask_image()
 
-    # 4. 生成词云
     try:
         wordcloud = WordCloud(
             font_path=font_path,

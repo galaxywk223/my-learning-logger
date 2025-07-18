@@ -1,5 +1,4 @@
-# learning_logger/blueprints/motto_management.py (FINAL AJAX VERSION)
-
+# 文件路径: learning_logger/blueprints/motto_management.py
 import random
 from flask import (Blueprint, render_template, request, redirect, url_for, flash, jsonify)
 from flask_login import login_required, current_user
@@ -27,7 +26,6 @@ def add_motto():
     db.session.add(new_motto)
     db.session.commit()
 
-    # Return HTML to be injected into the DOM
     new_motto_html = render_template('_motto_item.html', motto=new_motto)
     return jsonify({
         'success': True,
@@ -48,7 +46,7 @@ def edit_motto(motto_id):
 
     motto.content = content
     db.session.commit()
-    # Return the new content to update the specific element
+
     return jsonify({
         'success': True,
         'message': '格言已更新。',
@@ -63,7 +61,7 @@ def delete_motto(motto_id):
     motto = Motto.query.filter_by(id=motto_id, user_id=current_user.id).first_or_404()
     db.session.delete(motto)
     db.session.commit()
-    # Return the target to be removed from the DOM
+
     return jsonify({
         'success': True,
         'message': '格言已删除。',

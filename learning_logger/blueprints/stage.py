@@ -1,5 +1,4 @@
-# learning_logger/blueprints/stage.py (NEW FILE)
-
+# 文件路径: learning_logger/blueprints/stage.py
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, session, current_app)
 from flask_login import login_required, current_user
@@ -7,17 +6,16 @@ from datetime import date
 from .. import db
 from ..models import Stage
 
-# 1. 创建一个新的蓝图
 stage_bp = Blueprint('stage', __name__, url_prefix='/stages')
 
-# 2. 创建阶段管理页面的主路由
+
 @stage_bp.route('/')
 @login_required
 def manage_stages():
     user_stages = Stage.query.filter_by(user_id=current_user.id).order_by(Stage.start_date.desc()).all()
     return render_template('stage_management.html', user_stages=user_stages)
 
-# 3. 将所有与 stage 相关的路由从 main.py 移动到这里
+
 @stage_bp.route('/add', methods=['POST'])
 @login_required
 def add_stage():
@@ -79,5 +77,5 @@ def apply_stage(stage_id):
     stage = Stage.query.filter_by(id=stage_id, user_id=current_user.id).first_or_404()
     session['active_stage_id'] = stage.id
     flash(f'已切换到阶段：“{stage.name}”', 'success')
-    # 应用后跳转回记录列表页
+
     return redirect(url_for('records.list_records'))

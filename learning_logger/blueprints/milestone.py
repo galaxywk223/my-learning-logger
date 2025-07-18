@@ -1,5 +1,4 @@
-# learning_logger/blueprints/milestone.py (MODIFIED TO ALLOW ALL FILE TYPES)
-
+# 文件路径: learning_logger/blueprints/milestone.py
 import os
 import bleach
 from flask import (Blueprint, render_template, request, redirect, url_for,
@@ -13,22 +12,8 @@ from ..models import Milestone, MilestoneCategory, MilestoneAttachment
 
 milestone_bp = Blueprint('milestone', __name__)
 
-# REMOVED: The ALLOWED_EXTENSIONS set is no longer needed.
-# ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
-
-# This list of allowed HTML tags for the description remains for security.
 ALLOWED_TAGS = ['p', 'b', 'i', 'em', 'strong', 'ul', 'ol', 'li', 'br']
 
-
-# REMOVED: The allowed_file function is no longer needed as we accept all files.
-# def allowed_file(filename):
-#     return '.' in filename and \
-#         filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-
-# ============================================================================
-# Milestone Main Routes
-# ============================================================================
 
 @milestone_bp.route('/')
 @login_required
@@ -86,7 +71,7 @@ def add_milestone():
 
         files = request.files.getlist('attachments')
         for file in files:
-            # MODIFIED: Removed the allowed_file() check to accept any file type.
+
             if file and file.filename:
                 filename = secure_filename(file.filename)
                 user_upload_folder = os.path.join(current_app.config['MILESTONE_UPLOADS'], str(current_user.id))
@@ -128,7 +113,7 @@ def edit_milestone(milestone_id):
         if 'MILESTONE_UPLOADS' in current_app.config:
             files = request.files.getlist('attachments')
             for file in files:
-                # MODIFIED: Removed the allowed_file() check to accept any file type.
+
                 if file and file.filename:
                     filename = secure_filename(file.filename)
                     user_upload_folder = os.path.join(current_app.config['MILESTONE_UPLOADS'], str(current_user.id))
@@ -174,10 +159,6 @@ def delete_milestone(milestone_id):
     return redirect(url_for('milestone.list_milestones'))
 
 
-# ============================================================================
-# Attachment Routes
-# ============================================================================
-
 @milestone_bp.route('/attachments/<path:filepath>')
 @login_required
 def get_attachment(filepath):
@@ -200,7 +181,7 @@ def get_attachment(filepath):
         return "Forbidden", 403
 
     absolute_path_to_file_dir = os.path.join(upload_dir, user_id_from_path)
-    # MODIFIED: Set as_attachment=True to force download for non-image files
+
     return send_from_directory(absolute_path_to_file_dir, filename, as_attachment=True)
 
 
@@ -228,10 +209,6 @@ def delete_attachment(attachment_id):
         current_app.logger.error(f"删除附件 {attachment_id} 时出错: {e}")
         return jsonify({'success': False, 'message': '删除附件时发生服务器内部错误'}), 500
 
-
-# ============================================================================
-# Category Management Routes
-# ============================================================================
 
 @milestone_bp.route('/categories')
 @login_required

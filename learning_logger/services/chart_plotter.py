@@ -1,20 +1,16 @@
-# learning_logger/services/chart_plotter.py (NEW FILE)
-
+# 文件路径: learning_logger/services/chart_plotter.py
 import io
 import matplotlib.pyplot as plt
 import numpy as np
 
-# --- 样式配置 ---
-# 样式配置移到这里，因为它只与绘图相关
 plt.style.use('seaborn-v0_8-whitegrid')
 try:
-    # 优先使用黑体，如果系统支持
+
     plt.rcParams['font.sans-serif'] = ['SimHei']
     plt.rcParams['axes.unicode_minus'] = False
 except Exception:
     print("Warning: Chinese font 'SimHei' not found. Chart labels may not render correctly.")
 
-# 绘图颜色常量
 COLORS = {
     'duration_bar': (96 / 255, 165 / 255, 250 / 255, 0.6),
     'duration_line': '#2563EB',
@@ -30,7 +26,8 @@ def _plot_weekly_duration(ax, data):
     trends_y = np.array(data['trends'], dtype=float)
     trends_x = np.arange(len(data['labels']))
     valid_mask = ~np.isnan(trends_y)
-    ax.plot(trends_x[valid_mask], trends_y[valid_mask], label='趋势线 (3周)', color=COLORS['duration_line'], marker='o', markersize=4, linewidth=2.5)
+    ax.plot(trends_x[valid_mask], trends_y[valid_mask], label='趋势线 (3周)', color=COLORS['duration_line'], marker='o',
+            markersize=4, linewidth=2.5)
     ax.set_title('每周学习时长', fontsize=16, weight='bold')
     ax.tick_params(axis='x', rotation=45, labelsize=10)
     ax.legend()
@@ -41,11 +38,13 @@ def _plot_weekly_efficiency(ax, data):
     eff_y = np.array(data['actuals'], dtype=float)
     eff_x_labels = data['labels']
     valid_eff_mask = ~np.isnan(eff_y)
-    ax.bar(np.array(eff_x_labels)[valid_eff_mask], eff_y[valid_eff_mask], label='实际效率', color=COLORS['efficiency_bar'], width=0.6)
+    ax.bar(np.array(eff_x_labels)[valid_eff_mask], eff_y[valid_eff_mask], label='实际效率',
+           color=COLORS['efficiency_bar'], width=0.6)
     trends_eff_y = np.array(data['trends'], dtype=float)
     trends_eff_x = np.arange(len(eff_x_labels))
     valid_trends_mask = ~np.isnan(trends_eff_y)
-    ax.plot(trends_eff_x[valid_trends_mask], trends_eff_y[valid_trends_mask], label='趋势线 (3周)', color=COLORS['efficiency_line'], marker='o', markersize=4, linewidth=2.5)
+    ax.plot(trends_eff_x[valid_trends_mask], trends_eff_y[valid_trends_mask], label='趋势线 (3周)',
+            color=COLORS['efficiency_line'], marker='o', markersize=4, linewidth=2.5)
     ax.set_title('每周学习效率', fontsize=16, weight='bold')
     ax.tick_params(axis='x', rotation=45, labelsize=10)
     ax.legend()
@@ -57,7 +56,8 @@ def _plot_daily_duration(ax, data):
     daily_trends_y = np.array(data['trends'], dtype=float)
     daily_trends_x = np.arange(len(data['labels']))
     valid_daily_mask = ~np.isnan(daily_trends_y)
-    ax.plot(daily_trends_x[valid_daily_mask], daily_trends_y[valid_daily_mask], label='趋势线 (7日)', color=COLORS['duration_line'], linewidth=2.5)
+    ax.plot(daily_trends_x[valid_daily_mask], daily_trends_y[valid_daily_mask], label='趋势线 (7日)',
+            color=COLORS['duration_line'], linewidth=2.5)
     ax.set_title('每日学习时长', fontsize=16, weight='bold')
     ax.set_xticks([])
     ax.legend()
@@ -69,7 +69,8 @@ def _plot_daily_efficiency(ax, data):
     daily_eff_y = np.array(data['trends'], dtype=float)
     daily_eff_x = np.arange(len(data['labels']))
     valid_daily_eff_mask = ~np.isnan(daily_eff_y)
-    ax.plot(daily_eff_x[valid_daily_eff_mask], daily_eff_y[valid_daily_eff_mask], label='趋势线 (7日)', color=COLORS['efficiency_line'], linewidth=2.5)
+    ax.plot(daily_eff_x[valid_daily_eff_mask], daily_eff_y[valid_daily_eff_mask], label='趋势线 (7日)',
+            color=COLORS['efficiency_line'], linewidth=2.5)
     ax.set_title('每日学习效率', fontsize=16, weight='bold')
     ax.set_xticks([])
     ax.legend()
@@ -119,7 +120,6 @@ def export_category_image(username, category_data):
         gs = fig.add_gridspec(num_sub_charts + 1, 1, height_ratios=[4] + [2] * num_sub_charts)
         fig.suptitle(f'{username} 的学习分类总览', fontsize=24, weight='bold')
 
-        # 绘制主分类饼图
         main_cat_ax = fig.add_subplot(gs[0, 0])
         main_data = category_data['main']
         wedges, _, autotexts = main_cat_ax.pie(
@@ -131,7 +131,6 @@ def export_category_image(username, category_data):
         main_cat_ax.set_title('主分类时长占比', fontsize=16, weight='bold', pad=20)
         main_cat_ax.axis('equal')
 
-        # 为每个主分类绘制子分类条形图
         sorted_main_categories = category_data['main']['labels']
         for i, cat_name in enumerate(sorted_main_categories):
             sub_data = category_data['drilldown'].get(cat_name)

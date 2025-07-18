@@ -1,5 +1,4 @@
-# learning_logger/blueprints/todo.py (MODIFIED FOR OVERDUE STATUS)
-
+# 文件路径: learning_logger/blueprints/todo.py
 from flask import (Blueprint, render_template, request, redirect, url_for,
                    flash, jsonify)
 from flask_login import login_required, current_user
@@ -15,24 +14,21 @@ todo_bp = Blueprint('todo', __name__, url_prefix='/todo')
 @login_required
 def list_todos():
     """显示待办事项主页面，区分待办和已完成。"""
-    # 查询未完成的，并根据优先级（高->低）和截止日期（近->远）排序
+
     pending_todos = Todo.query.filter_by(user_id=current_user.id, is_completed=False).order_by(
         Todo.priority.desc(), Todo.due_date.asc()
     ).all()
 
-    # 查询已完成的，并根据完成日期（近->远）排序
     completed_todos = Todo.query.filter_by(user_id=current_user.id, is_completed=True).order_by(
         Todo.completed_at.desc()
     ).all()
 
-    # --- 新增：为待办任务添加是否逾期的状态 ---
     today = date.today()
     for todo in pending_todos:
         if todo.due_date and todo.due_date < today:
             todo.is_overdue = True
         else:
             todo.is_overdue = False
-    # --- 结束新增 ---
 
     return render_template('todo.html', pending_todos=pending_todos, completed_todos=completed_todos)
 
