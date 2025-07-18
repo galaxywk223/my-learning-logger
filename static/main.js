@@ -40,8 +40,7 @@ const showToast = (message, category = 'info') => {
 };
 
 /**
- * NEW & IMPROVED: Handles all AJAX form submissions gracefully.
- * This function is designed to be more generic.
+ * Handles all AJAX form submissions gracefully.
  * @param {HTMLFormElement} form - The form element being submitted.
  */
 const handleAjaxFormSubmit = async (form) => {
@@ -62,50 +61,53 @@ const handleAjaxFormSubmit = async (form) => {
 
         if (response.ok) {
             showToast(result.message || '操作成功！', 'success');
-
             if (modalInstance) modalInstance.hide();
 
-            // --- SCENARIO 1: Reload the page ---
-            // The server can ask for a reload by sending { "reload": true }
             if (result.reload) {
                 setTimeout(() => window.location.reload(), 500);
                 return;
             }
 
-            // --- SCENARIO 2: Inject new HTML content ---
-            // Server sends { "html": "...", "target_container": "#id", "action": "append/prepend" }
             if (result.html && result.target_container) {
                 const container = document.querySelector(result.target_container);
                 if (container) {
                     const action = result.action === 'append' ? 'beforeend' : 'afterbegin';
                     container.insertAdjacentHTML(action, result.html);
-                    lucide.createIcons({ nodes: [container.lastElementChild] });
+                    const newElement = action === 'beforeend' ? container.lastElementChild : container.firstElementChild;
+                    const sibling = newElement.nextElementSibling;
+                    const nodesToRender = sibling ? [newElement, sibling] : [newElement];
+                    lucide.createIcons({nodes: nodesToRender});
+                } else {
+                    showToast('正在为您刷新页面以显示新的一天...', 'info');
+                    setTimeout(() => window.location.reload(), 800);
+                    return;
                 }
-                form.reset(); // Reset form after successful submission
+                form.reset();
             }
 
-            // --- SCENARIO 3: Update specific element's text content ---
-            // Server sends { "update_target": "#id", "update_content": "New text" }
-            if (result.update_target && result.update_content) {
-                const targetElement = document.querySelector(result.update_target);
-                if (targetElement) {
-                    targetElement.textContent = result.update_content;
+            if (result.updates) {
+                for (const key in result.updates) {
+                    const updateInfo = result.updates[key];
+                    const targetElement = document.querySelector(updateInfo.target_id);
+                    if (targetElement) {
+                        targetElement.textContent = updateInfo.value;
+                    }
                 }
             }
 
-            // --- SCENARIO 4: Remove an element from the DOM ---
-            // Server sends { "remove_target": "#id" }
-            if (result.remove_target) {
-                const elementToRemove = document.querySelector(result.remove_target);
-                if (elementToRemove) {
-                    elementToRemove.style.transition = 'opacity 0.3s ease';
-                    elementToRemove.style.opacity = '0';
-                    setTimeout(() => elementToRemove.remove(), 300);
-                }
+            const targetsToRemove = result.remove_target ? [result.remove_target] : (result.remove_targets || []);
+            if (targetsToRemove.length > 0) {
+                targetsToRemove.forEach(selector => {
+                    const elementToRemove = document.querySelector(selector);
+                    if (elementToRemove) {
+                        elementToRemove.style.transition = 'opacity 0.3s ease';
+                        elementToRemove.style.opacity = '0';
+                        setTimeout(() => elementToRemove.remove(), 300);
+                    }
+                });
             }
 
         } else {
-            // Handle server-side validation errors or other failures
             showToast(result.message || '操作失败，请检查您的输入。', 'error');
             const errorDiv = form.querySelector('.error-message');
             if (errorDiv) {
@@ -119,12 +121,10 @@ const handleAjaxFormSubmit = async (form) => {
     }
 };
 
-// --- Global Event Listener ---
-// We use a single, delegated event listener to handle all our forms.
+// --- 全局事件监听器 ---
 document.addEventListener('submit', function(event) {
-    // Check if the submitted form has the 'ajax-form' class
     if (event.target.matches('form.ajax-form')) {
-        event.preventDefault(); // Prevent the default page reload
+        event.preventDefault();
         handleAjaxFormSubmit(event.target);
     }
 });

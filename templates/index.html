@@ -61,7 +61,6 @@
         font-weight: 500;
     }
 
-    /* --- NEW: Daily Progress Bar Styles --- */
     .daily-progress-container {
         flex-grow: 1;
         margin: 0 1rem;
@@ -86,14 +85,12 @@
         color: var(--color-text-medium);
     }
 
-    /* --- NEW: Quick Add Button Styles --- */
     .quick-add-btn {
         padding: 0.2rem 0.5rem;
         line-height: 1;
         border-radius: 50%;
     }
 
-    /* --- Log Table Styles --- */
     .log-table {
         margin-bottom: 0;
         table-layout: fixed;
@@ -133,7 +130,6 @@
         height: 18px;
     }
 
-    /* --- NEW: Task Cell and Category Tag Styles --- */
     .task-cell {
         display: flex;
         align-items: center;
@@ -161,45 +157,17 @@
         background-color: #6c757d; /* default color */
     }
 
-    /* Define some colors for categories. You can add more. */
-    .category-color-1 {
-        background-color: #0d6efd;
-    }
+    .category-color-1 { background-color: #0d6efd; }
+    .category-color-2 { background-color: #198754; }
+    .category-color-3 { background-color: #ffc107; color: #000; }
+    .category-color-4 { background-color: #dc3545; }
+    .category-color-5 { background-color: #6f42c1; }
+    .category-color-0 { background-color: #fd7e14; }
 
-    /* Blue */
-    .category-color-2 {
-        background-color: #198754;
-    }
-
-    /* Green */
-    .category-color-3 {
-        background-color: #ffc107;
-        color: #000;
-    }
-
-    /* Yellow */
-    .category-color-4 {
-        background-color: #dc3545;
-    }
-
-    /* Red */
-    .category-color-5 {
-        background-color: #6f42c1;
-    }
-
-    /* Purple */
-    .category-color-0 {
-        background-color: #fd7e14;
-    }
-
-    /* Orange */
-
-    /* --- NEW: Note Row Styles --- */
     .log-notes-row {
         display: none;
     }
 
-    /* Hidden by default */
     .log-notes-cell {
         padding-top: 0 !important;
         border-top: 0 !important;
@@ -237,26 +205,26 @@
             <button class="accordion-button {% if not loop.first %}collapsed{% endif %}" type="button"
                     data-bs-toggle="collapse" data-bs-target="#collapse-{{ week.year }}-{{ week.week_num }}">
                 <span class="flex-grow-1 me-3">{{ week.year }} 年 - 第 {{ week.week_num }} 周</span>
-                <span class="badge bg-secondary">周平均效率: {{ week.efficiency|round(1, 'floor') }}</span>
+                <span class="badge bg-secondary" id="weekly-efficiency-badge-{{ week.year }}-{{ week.week_num }}">周平均效率: {{ week.efficiency|round(1, 'floor') }}</span>
             </button>
         </h2>
         <div id="collapse-{{ week.year }}-{{ week.week_num }}"
              class="accordion-collapse collapse {% if loop.first %}show{% endif %}" data-bs-parent="#weeksAccordion">
             <div class="accordion-body">
                 {% for day in week.days %}
-                <div class="card day-card">
+                <div class="card day-card" id="day-card-{{ day.date.isoformat() }}">
                     <div class="card-header d-flex justify-content-between align-items-center gap-3">
                         <span>{{ day.date.strftime('%Y-%m-%d') }} (周{{ ['一','二','三','四','五','六','日'][day.date.weekday()] }})</span>
 
-                        {% set daily_target = 840 %} {# 每日目标，单位分钟，例如 14小时=840分钟 #}
+                        {% set daily_target = 840 %}
                         <div class="daily-progress-container" title="今日总时长: {{ day.total_duration }} 分钟">
                             <div class="daily-progress-bar">
                                 <div style="width: {{ [100, (day.total_duration / daily_target * 100)] | min }}%;"></div>
                             </div>
                         </div>
-                        <span class="total-duration-text">{{ "%.1f"|format(day.total_duration / 60) }}h</span>
+                        <span class="total-duration-text" id="daily-duration-text-{{ day.date.isoformat() }}">{{ "%.1f"|format(day.total_duration / 60) }}h</span>
 
-                        <span class="badge bg-info text-dark">日效率: {{ day.efficiency|round(1, 'floor') }}</span>
+                        <span class="badge bg-info text-dark" id="daily-efficiency-badge-{{ day.date.isoformat() }}">日效率: {{ day.efficiency|round(1, 'floor') }}</span>
 
                         <a href="#" class="btn btn-sm btn-outline-primary quick-add-btn" data-bs-toggle="modal"
                            data-bs-target="#formModal"
@@ -276,13 +244,11 @@
                                 <th style="width: 15%;" class="text-end">操作</th>
                             </tr>
                             </thead>
-                            {# --- 修改部分开始 --- #}
                             <tbody id="log-table-body-{{ day.date.isoformat() }}">
                             {% for log in day.logs %}
                             {% include '_log_entry_item.html' %}
                             {% endfor %}
                             </tbody>
-                            {# --- 修改部分结束 --- #}
                         </table>
                     </div>
                 </div>
@@ -304,94 +270,108 @@
         <div class="modal-content"></div>
     </div>
 </div>
-<!--  这个空的 form 标签是给删除按钮用的，但现在我们不再需要它了，因为 CSRF 令牌将通过 JS 添加 -->
-<!-- <form id="deleteForm" method="POST" style="display: none;"></form> -->
 {% endblock %}
 
 {% block scripts %}
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        // --- Modal Logic (unchanged) ---
-        const formModal = document.getElementById('formModal');
-        if (formModal) {
-            formModal.addEventListener('show.bs.modal', function (event) {
-                const button = event.relatedTarget;
-                const url = button.getAttribute('data-url');
-                const modalContent = formModal.querySelector('.modal-content');
+document.addEventListener('DOMContentLoaded', function () {
+    // --- 1. 负责加载“添加/编辑”模态框内容的逻辑 ---
+    const formModal = document.getElementById('formModal');
+    if (formModal) {
+        formModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const url = button.getAttribute('data-url');
+            const modalContent = formModal.querySelector('.modal-content');
 
-                fetch(url)
-                    .then(response => response.text())
-                    .then(html => {
-                        const parser = new DOMParser();
-                        const doc = parser.parseFromString(html, "text/html");
-                        modalContent.innerHTML = doc.body.innerHTML;
-                        const scripts = Array.from(doc.head.getElementsByTagName('script')).concat(Array.from(doc.body.getElementsByTagName('script')));
-                        scripts.forEach(oldScript => {
-                            const newScript = document.createElement('script');
-                            newScript.text = oldScript.innerText;
-                            document.head.appendChild(newScript).parentNode.removeChild(newScript);
-                        });
-                        lucide.createIcons();
-                    })
-                    .catch(err => console.error('Failed to load modal content:', err));
-            });
-        }
-
-        // --- AJAX Form Submission (This function is now in main.js) ---
-        // window.submitAjaxForm = function(form) { ... }
-
-        // --- Delete Confirmation (MODIFIED) ---
-        window.confirmDelete = function (event, logId) {
-            event.preventDefault();
-            if (confirm('确定要删除这条记录吗？此操作无法撤销。')) {
-                // 新增: 获取 CSRF 令牌
-                const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-
-                fetch(`/records/delete/${logId}`, {
-                    method: 'POST',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'X-CSRFToken': csrfToken // 新增: 在请求头中添加令牌
+            fetch(url)
+                .then(response => response.text())
+                .then(html => {
+                    modalContent.innerHTML = html;
+                    const scripts = modalContent.getElementsByTagName('script');
+                    for (let i = 0; i < scripts.length; i++) {
+                        eval(scripts[i].innerText);
                     }
+                    lucide.createIcons();
                 })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            location.reload();
-                        } else {
-                            // 使用我们全局的 toast 通知来显示错误
-                            if (typeof showToast === 'function') {
-                                showToast(data.message || '删除失败', 'error');
-                            } else {
-                                alert('删除失败: ' + (data.message || '未知错误'));
+                .catch(err => console.error('Failed to load modal content:', err));
+        });
+    }
+
+    // --- 2. 负责处理“删除”按钮点击事件的函数 ---
+    window.confirmDelete = function (event, logId) {
+        event.preventDefault();
+        if (confirm('确定要删除这条记录吗？此操作无法撤销。')) {
+            const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+            fetch(`/records/delete/${logId}`, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast(data.message, 'success');
+
+                    if (data.reload) {
+                        showToast('正在刷新...', 'info');
+                        setTimeout(() => window.location.reload(), 500);
+                        return;
+                    }
+
+                    if (data.remove_target) {
+                        const elementToRemove = document.querySelector(data.remove_target);
+                        if (elementToRemove) {
+                            elementToRemove.style.transition = 'opacity 0.3s ease';
+                            elementToRemove.style.opacity = '0';
+                            setTimeout(() => {
+                                const noteRowId = data.remove_target.replace('log-entry-row-', 'notes-');
+                                const noteElementToRemove = document.querySelector(noteRowId);
+                                if (noteElementToRemove) {
+                                    noteElementToRemove.remove();
+                                }
+                                elementToRemove.remove();
+                            }, 300);
+                        }
+                    }
+
+                    if (data.updates) {
+                        for (const key in data.updates) {
+                            const updateInfo = data.updates[key];
+                            const targetElement = document.querySelector(updateInfo.target_id);
+                            if (targetElement) {
+                                targetElement.textContent = updateInfo.value;
                             }
                         }
-                    })
-                    .catch(err => {
-                        console.error('Delete error:', err);
-                        if (typeof showToast === 'function') {
-                            showToast('删除时发生网络错误。', 'error');
-                        } else {
-                            alert('删除时发生网络错误。');
-                        }
-                    });
+                    }
+                } else {
+                    showToast(data.message || '删除失败', 'error');
+                }
+            })
+            .catch(err => {
+                console.error('Delete error:', err);
+                showToast('删除时发生网络错误。', 'error');
+            });
+        }
+    }
+
+    // --- 3. 负责处理“笔记”展开/折叠的逻辑 (使用事件委托) ---
+    document.body.addEventListener('click', function(event) {
+        const toggleBtn = event.target.closest('.notes-toggle-btn');
+        if (toggleBtn) {
+            event.preventDefault();
+            const targetId = toggleBtn.dataset.targetId;
+            const targetRow = document.getElementById(targetId);
+            if (targetRow) {
+                targetRow.style.display = (targetRow.style.display === 'table-row') ? 'none' : 'table-row';
             }
         }
-
-        // --- Notes Toggle Logic (unchanged) ---
-        document.querySelectorAll('.notes-toggle-btn').forEach(button => {
-            button.addEventListener('click', function (event) {
-                event.preventDefault();
-                const targetId = this.dataset.targetId;
-                const targetRow = document.getElementById(targetId);
-                if (targetRow) {
-                    targetRow.style.display = (targetRow.style.display === 'table-row') ? 'none' : 'table-row';
-                }
-            });
-        });
-
-        // --- Lucide Icons Initialization ---
-        lucide.createIcons();
     });
+
+    // --- 4. 初始化页面上的 Lucide 图标 ---
+    lucide.createIcons();
+});
 </script>
 {% endblock %}
