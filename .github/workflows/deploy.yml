@@ -47,4 +47,4 @@ jobs:
             git log -1
             
             echo "--- 6. 执行更新脚本 ---"
-            sh ./.update.sh
+            sh ./update.sh
