@@ -12,12 +12,27 @@ from ..models import Stage, LogEntry
 
 
 def _load_stopwords():
-    """从静态文件加载停用词。"""
-    stopwords_path = os.path.join(current_app.static_folder, 'cn_stopwords.txt')
-    if os.path.exists(stopwords_path):
-        with open(stopwords_path, 'r', encoding='utf-8') as f:
-            return {line.strip() for line in f}
-    return set()
+    """从静态文件夹加载所有指定的停用词文件。"""
+    stopwords = set()
+    # 定义所有停用词文件名列表
+    stopwords_files = [
+        'cn_stopwords.txt',
+        'baidu_stopwords.txt',
+        'hit_stopwords.txt',
+        'scu_stopwords.txt',
+        'custom_stopwords.txt'  # 新增的自定义停用词文件
+    ]
+
+    for filename in stopwords_files:
+        stopwords_path = os.path.join(current_app.static_folder, filename)
+        if os.path.exists(stopwords_path):
+            with open(stopwords_path, 'r', encoding='utf-8') as f:
+                # 将读取到的停用词添加到集合中
+                stopwords.update([line.strip() for line in f])
+        else:
+            current_app.logger.warning(f"Stopwords file not found: {stopwords_path}")
+
+    return stopwords
 
 
 def _get_mask_image():

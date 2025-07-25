@@ -131,20 +131,30 @@ def import_data_for_user(user, zip_file_stream):
                             if 'user_id' in model.__table__.columns:
                                 record_data['user_id'] = user.id
 
+                            # --- MODIFICATION START ---
+                            # 修正了日期和时间字符串的解析逻辑
                             for key, value in record_data.items():
-                                if isinstance(value, str):
-                                    if 'date' in key:
+                                # 只处理非空字符串
+                                if isinstance(value, str) and value:
+                                    # 更稳健地判断是否为日期时间字段，例如检查结尾是否为 _at 或 _utc
+                                    if 'datetime' in key or key.endswith('_at') or key.endswith('_utc'):
+                                        try:
+                                            # fromisoformat 可以处理带或不带时区信息的ISO格式字符串
+                                            dt_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
+                                            # 存储为无时区信息的datetime对象以兼容SQLite
+                                            record_data[key] = dt_obj.replace(tzinfo=None)
+                                        except ValueError:
+                                            current_app.logger.warning(
+                                                f"Could not parse datetime string '{value}' for key '{key}'")
+                                            pass
+                                    elif 'date' in key:
                                         try:
                                             record_data[key] = date.fromisoformat(value)
-                                        except (ValueError, TypeError):
+                                        except ValueError:
+                                            current_app.logger.warning(
+                                                f"Could not parse date string '{value}' for key '{key}'")
                                             pass
-                                    if 'datetime' in key:
-                                        try:
-
-                                            dt_obj = datetime.fromisoformat(value.replace('Z', '+00:00'))
-                                            record_data[key] = dt_obj.replace(tzinfo=None)
-                                        except (ValueError, TypeError):
-                                            pass
+                            # --- MODIFICATION END ---
 
                             db.session.add(model(**record_data))
 
