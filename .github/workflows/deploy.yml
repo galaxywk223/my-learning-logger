@@ -26,24 +26,14 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            echo "--- 1. 开始调试 ---"
-            echo "登录用户: $(whoami)"
-            echo "当前路径: $(pwd)"
+            # 使用正确的绝对路径进入项目目录
+            cd /var/www/my-learning-logger
             
-            echo "--- 2. 进入项目目录 ---"
-            cd /root/my-learning-logger
-            echo "进入后路径: $(pwd)"
-            
-            echo "--- 3. 检查Git远程地址 ---"
-            git remote -v
-            
-            echo "--- 4. 尝试拉取代码 ---"
+            # 后续命令现在可以正常工作了
+            echo "Pulling latest code..."
             git pull
-            echo "--- Git Pull 命令执行完毕 ---"
             
-            echo "--- 5. 再次检查最新commit ---"
-            git log -1
-            
-            echo "--- 6. 执行更新脚本 ---"
+            echo "Running update script..."
             sh ./.update.sh
-            echo "--- 部署脚本执行完毕 ---"
+            
+            echo "Deployment successful!"
