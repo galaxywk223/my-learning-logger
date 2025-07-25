@@ -26,14 +26,25 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SERVER_SSH_KEY }}
           script: |
-            # 使用正确的绝对路径进入项目目录
+            echo "--- 1. 进入正确目录 ---"
             cd /var/www/my-learning-logger
+            echo "当前路径: $(pwd)"
             
-            # 后续命令现在可以正常工作了
-            echo "Pulling latest code..."
-            git pull
+            echo "--- 2. 检查文件权限和所有者 ---"
+            ls -la
             
-            echo "Running update script..."
+            echo "--- 3. 检查当前Git状态 (非常关键) ---"
+            git status
+            
+            echo "--- 4. 使用强制手段更新代码 ---"
+            # 第1步：从远程仓库获取最新代码信息，这一步通常不会失败
+            git fetch origin
+            
+            # 第2步：硬重置！放弃所有本地修改，强制更新到和远程 main 分支完全一致
+            git reset --hard origin/main
+            
+            echo "--- 5. 检查强制更新后的最新commit ---"
+            git log -1
+            
+            echo "--- 6. 执行更新脚本 ---"
             sh ./.update.sh
-            
-            echo "Deployment successful!"
