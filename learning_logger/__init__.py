@@ -1,4 +1,3 @@
-# 文件路径: learning_logger/__init__.py
 import os
 import logging
 from flask import Flask
@@ -8,6 +7,7 @@ from flask_migrate import Migrate
 from flask_wtf.csrf import CSRFProtect
 from config import config
 import matplotlib
+import jieba # <-- 1. 导入 jieba
 
 db = SQLAlchemy()
 login_manager = LoginManager()
@@ -26,19 +26,13 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
     config[config_name].init_app(app)
 
     if app.config.get('SQLALCHEMY_ECHO'):
-
         sql_logger = logging.getLogger('sqlalchemy.engine')
-
         sql_logger.setLevel(logging.INFO)
-
         if not sql_logger.handlers:
             console_handler = logging.StreamHandler()
-
             formatter = logging.Formatter('%(levelname)s:%(name)s:%(message)s')
             console_handler.setFormatter(formatter)
-
             sql_logger.addHandler(console_handler)
-
         print("=" * 50)
         print("INFO: Logging for 'sqlalchemy.engine' has been programmatically enabled.")
         print("=" * 50)
@@ -49,7 +43,6 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
     csrf.init_app(app)
 
     with app.app_context():
-
         from .blueprints.main import main_bp
         from .blueprints.records import records_bp
         from .blueprints.charts import charts_bp
@@ -91,5 +84,11 @@ def create_app(config_name=os.getenv('FLASK_ENV', 'default')):
 
         from . import helpers
         helpers.setup_template_filters(app)
+
+    # --- 2. 性能优化：在应用启动时预加载 jieba 词典 ---
+    app.logger.info("Initializing jieba dictionary...")
+    jieba.initialize()
+    app.logger.info("Jieba dictionary initialized successfully.")
+    # --- 结束优化 ---
 
     return app

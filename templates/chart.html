@@ -31,8 +31,47 @@
     #stageFilter.form-select option { color: #000000; background-color: #ffffff; }
     #stageFilter.form-select:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25); }
     #category-table-container .table-hover tbody tr:hover { cursor: pointer; }
+
+    /* --- 新增词云相关样式 --- */
     #wordcloud-pane .card-body { min-height: 550px; max-height: 550px; }
-    #wordcloud-image { max-width: 100%; max-height: 500px; height: auto; display: none; transition: opacity 0.3s ease; }
+    #wordcloud-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem; /* 12px */
+    }
+    .mask-selector-wrapper {
+        display: flex;
+        gap: 0.5rem; /* 8px */
+        align-items: center;
+        background-color: var(--color-card-bg);
+        padding: 0.25rem;
+        border-radius: var(--border-radius-md);
+        border: 1px solid var(--color-border);
+    }
+    .mask-option {
+        width: 32px;
+        height: 32px;
+        padding: 4px;
+        border-radius: var(--border-radius-sm);
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        filter: invert(0.3); /* 让图标在亮色和暗色主题下都可见 */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .mask-option:hover {
+        background-color: var(--color-hover-bg);
+        filter: invert(0.1);
+    }
+    .mask-option.active {
+        background-color: var(--color-primary);
+        box-shadow: 0 0 0 2px var(--color-primary-light);
+        filter: invert(1) brightness(2);
+    }
+    #paletteSelector {
+        min-width: 120px;
+    }
 </style>
 
 <div class="page-header d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -78,13 +117,14 @@
     </div>
 </div>
 
-{# --- 修改: 添加 data-* 属性来传递 URL --- #}
 <div class="tab-content pt-3" id="chartsTabContent"
      data-trends-url="{{ url_for('charts.get_chart_data') }}"
      data-category-url="{{ url_for('category_charts.get_data') }}"
-     data-wordcloud-url="{{ url_for('charts.get_wordcloud_image') }}">
+     data-wordcloud-url="{{ url_for('charts.get_wordcloud_image') }}"
+     data-mask-options='{{ mask_options | tojson }}'> {# 将蒙版选项传递给JS #}
 
     <div class="tab-pane fade show active" id="trends-pane" role="tabpanel" aria-labelledby="trends-tab">
+        <!-- 趋势分析内容保持不变 -->
         <div class="row g-4 mb-4">
             <div class="col-lg-4 col-md-6">
                 <div class="kpi-card kpi-card-avg">
@@ -138,6 +178,7 @@
         </div>
     </div>
     <div class="tab-pane fade" id="category-pane" role="tabpanel" aria-labelledby="category-tab">
+        <!-- 分类占比内容保持不变 -->
         <div class="row g-3">
             <div class="col-lg-7">
                 <div class="card h-100">
@@ -174,23 +215,22 @@
 
     <div class="tab-pane fade" id="wordcloud-pane" role="tabpanel" aria-labelledby="wordcloud-tab">
         <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
+            <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-3">
                 <h5 class="card-title mb-0">学习笔记高频词</h5>
-                <button id="refreshWordcloudBtn" class="btn btn-sm btn-outline-primary">
-                    <i data-lucide="refresh-cw" style="width:16px; height:16px; margin-right: 4px;"></i>切换形状
-                </button>
+                <div id="wordcloud-controls">
+                    <select id="paletteSelector" class="form-select form-select-sm">
+                        <option value="default" selected>默认主题</option>
+                        <option value="primary_gradient">主色调渐变</option>
+                        <option value="inspiration">活力渐变</option>
+                        <option value="calm">宁静渐变</option>
+                        <option value="forest">森林渐变</option>
+                    </select>
+                    <div id="mask-selector-container" class="mask-selector-wrapper"></div>
+                </div>
             </div>
-            <div class="card-body text-center d-flex align-items-center justify-content-center">
-                <div id="wordcloud-loading" style="display: none;">
-                    <div class="spinner-border text-primary" role="status">
-                        <span class="visually-hidden">Loading...</span>
-                    </div>
-                    <p class="mt-2">正在生成词云，请稍候...</p>
-                </div>
-                <img id="wordcloud-image" src="" alt="笔记词云">
-                <div id="wordcloud-nodata" class="alert alert-info" style="display: none;">
-                    在当前筛选的范围内没有找到任何笔记内容来生成词云。
-                </div>
+            <!-- *** 修改点：只保留一个容器 *** -->
+            <div class="card-body text-center d-flex align-items-center justify-content-center" id="wordcloud-container">
+                <!-- JS会在这里动态填充内容 -->
             </div>
         </div>
     </div>
@@ -198,7 +238,6 @@
 {% endblock %}
 
 {% block scripts %}
-{# --- 修改: 移除所有内联JS，改为引入外部文件 --- #}
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
 <script src="{{ url_for('static', filename='js/chart_controller.js') }}"></script>

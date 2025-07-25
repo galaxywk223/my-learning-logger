@@ -1,11 +1,11 @@
-// 文件路径: static/js/chart_controller.js
 document.addEventListener('DOMContentLoaded', function () {
 
+    // --- 全局设置 ---
     Chart.register(ChartDataLabels);
     Chart.defaults.plugins.datalabels.display = false;
     lucide.createIcons();
 
-
+    // --- DOM 元素和数据 ---
     const chartContainer = document.getElementById('chartsTabContent');
     if (!chartContainer) {
         console.error("Chart container #chartsTabContent not found!");
@@ -16,10 +16,10 @@ document.addEventListener('DOMContentLoaded', function () {
         category: chartContainer.dataset.categoryUrl,
         wordcloud: chartContainer.dataset.wordcloudUrl
     };
-
+    const MASK_OPTIONS = JSON.parse(chartContainer.dataset.maskOptions || '[]');
     const stageFilter = document.getElementById('stageFilter');
 
-
+    // --- 标签页切换逻辑 ---
     const mainTabs = document.querySelectorAll('#chartsTab button[data-bs-toggle="tab"]');
     const trendsControls = document.getElementById('trends-controls');
     const filterControls = document.getElementById('filter-controls');
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-
+    // --- 趋势分析模块 (保持不变) ---
     (function initTrendAnalysis() {
         let dataStore = {}, durationChart, efficiencyChart;
         const createChartOptions = t => ({
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function () {
         fetchDataAndRender();
     })();
 
-
+    // --- 分类分析模块 (保持不变) ---
     (function initCategoryAnalysis() {
         let doughnutChart, barChart, rawData, currentView = 'main', currentCategory = '';
         const doughnutCtx = document.getElementById('categoryDoughnutChart'),
@@ -356,37 +356,84 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     })();
 
-
+    // --- 词云分析模块 (最终修正版) ---
     (function initWordcloudAnalysis() {
         const wordcloudTab = document.getElementById('wordcloud-tab');
-        const imageEl = document.getElementById('wordcloud-image');
-        const loadingEl = document.getElementById('wordcloud-loading');
-        const noDataEl = document.getElementById('wordcloud-nodata');
-        const refreshBtn = document.getElementById('refreshWordcloudBtn');
-        let isWordcloudLoaded = false;
+        const paletteSelector = document.getElementById('paletteSelector');
+        const maskContainer = document.getElementById('mask-selector-container');
+        const wordcloudContainer = document.getElementById('wordcloud-container');
 
+        let isWordcloudLoaded = false;
+        let currentMask = 'random';
+        let currentImageObjectUrl = null;
+
+        // *** 新增：UI状态管理函数 ***
+        function showLoadingState() {
+            wordcloudContainer.innerHTML = `
+                <div class="d-flex flex-column align-items-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p class="mt-2 text-muted">正在生成词云，请稍候...</p>
+                </div>`;
+        }
+
+        function showImageState(imageUrl) {
+            wordcloudContainer.innerHTML = `<img src="${imageUrl}" alt="笔记词云" style="max-width: 100%; max-height: 500px; height: auto; opacity: 0; transition: opacity 0.5s;" onload="this.style.opacity='1'">`;
+        }
+
+        function showNoDataState(message) {
+            wordcloudContainer.innerHTML = `<div class="alert alert-light text-center">${message}</div>`;
+        }
+
+        // 动态创建蒙版选择器
+        function createMaskSelector() {
+            if (!maskContainer) return;
+            maskContainer.innerHTML = '';
+
+            MASK_OPTIONS.forEach(opt => {
+                let maskElement;
+                if (opt.file === 'random') {
+                    maskElement = document.createElement('div');
+                    maskElement.innerHTML = `<i data-lucide="shuffle" style="width: 20px; height: 20px;"></i>`;
+                } else {
+                    maskElement = document.createElement('img');
+                    maskElement.src = `/static/images/masks/${opt.file}`;
+                }
+
+                maskElement.title = opt.name;
+                maskElement.classList.add('mask-option');
+                maskElement.dataset.mask = opt.file;
+
+                if (opt.file === currentMask) {
+                    maskElement.classList.add('active');
+                }
+
+                maskElement.addEventListener('click', function() {
+                    maskContainer.querySelector('.mask-option.active')?.classList.remove('active');
+                    this.classList.add('active');
+                    currentMask = this.dataset.mask;
+                    loadWordCloud();
+                });
+                maskContainer.appendChild(maskElement);
+            });
+            lucide.createIcons();
+        }
+
+        // 核心加载函数
         function loadWordCloud() {
             const stageId = stageFilter.value;
+            const selectedPalette = paletteSelector.value;
             const timestamp = new Date().getTime();
-            const apiUrl = `${URLS.wordcloud}?stage_id=${stageId}&t=${timestamp}`;
-            loadingEl.style.display = 'flex';
-            imageEl.style.display = 'none';
-            noDataEl.style.display = 'none';
-            imageEl.onload = () => {
-                loadingEl.style.display = 'none';
-                imageEl.style.display = 'block';
-                URL.revokeObjectURL(imageEl.src);
-            };
-            imageEl.onerror = () => {
-                loadingEl.style.display = 'none';
-                noDataEl.textContent = '加载词云图片时出错。';
-                noDataEl.style.display = 'block';
-            };
+
+            const apiUrl = `${URLS.wordcloud}?stage_id=${stageId}&mask=${currentMask}&palette=${selectedPalette}&t=${timestamp}`;
+
+            showLoadingState();
+
             fetch(apiUrl)
                 .then(response => {
                     if (response.status === 204) {
-                        loadingEl.style.display = 'none';
-                        noDataEl.style.display = 'block';
+                        showNoDataState('在当前筛选的范围内没有找到任何笔记内容来生成词云。');
                         return null;
                     }
                     if (!response.ok) {
@@ -396,24 +443,32 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(blob => {
                     if (blob) {
-                        imageEl.src = URL.createObjectURL(blob);
+                        if (currentImageObjectUrl) {
+                            URL.revokeObjectURL(currentImageObjectUrl);
+                        }
+                        currentImageObjectUrl = URL.createObjectURL(blob);
+                        showImageState(currentImageObjectUrl);
                     }
                 })
                 .catch(error => {
                     console.error('Error loading word cloud:', error);
-                    loadingEl.style.display = 'none';
-                    noDataEl.textContent = '加载词云时发生网络错误，请稍后重试。';
-                    noDataEl.style.display = 'block';
+                    showNoDataState('加载词云时发生网络错误，请稍后重试。');
                 });
         }
 
+        // 初始化
+        createMaskSelector();
+
+        // 事件监听
         wordcloudTab.addEventListener('shown.bs.tab', () => {
             if (!isWordcloudLoaded) {
                 loadWordCloud();
                 isWordcloudLoaded = true;
             }
         });
-        refreshBtn.addEventListener('click', loadWordCloud);
+
+        paletteSelector.addEventListener('change', loadWordCloud);
+
         stageFilter.addEventListener('change', () => {
             if (wordcloudTab.classList.contains('active')) {
                 loadWordCloud();
