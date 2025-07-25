@@ -1,23 +1,26 @@
 #!/bin/bash
 
-# --- 脚本说明 ---
-# 功能: 自动从Gitee拉取最新代码并重启应用
-# 正确的项目路径: /var/www/my-learning-logger
+# set -e 命令能确保脚本中任何一个命令执行失败，整个脚本就会立刻退出，这对于自动化非常重要。
+set -e
 
-echo "   1/3: 开始更新... 正在进入项目目录..."
-# 进入您的项目实际目录，如果失败则退出脚本
-cd /var/www/my-learning-logger || { echo "❌ 错误：无法进入项目目录 /var/www/my-learning-logger"; exit 1; }
+echo "--- 部署脚本开始执行 ---"
+echo "  - 目标服务: gunicorn.service"
+echo "  - 操作: 重启服务"
 
-echo "   2/3: 正在从 Gitee 拉取最新代码 (main分支)..."
-# 从 Gitee 的 main 分支拉取代码
-# 如果您的主分支是 master，请把下面的 main 改成 master
-git pull origin main
-
-echo "   3/3: 代码拉取完成，正在重启 Gunicorn 服务..."
-# 使用 systemd 重启 gunicorn 服务
+# 1. 使用 systemd 重启 gunicorn 服务
 sudo systemctl restart gunicorn.service
 
-# 等待2秒，然后检查服务状态，确保重启成功
-sleep 2
-echo "✅ 更新完成！检查服务最新状态："
-systemctl status gunicorn.service --no-pager -l                                                                                                             ~                                                                                                                       ~                                                                                                                       ~
+# 2. 等待几秒钟，给服务一点启动时间
+echo "  - 等待 3 秒..."
+sleep 3
+
+# 3. 检查服务是否真的处于 "active" (运行中) 状态
+#    is-active 命令如果服务正常则返回0，否则返回非0，配合 set -e 就能验证重启是否成功
+echo "  - 验证服务状态..."
+sudo systemctl is-active --quiet gunicorn.service
+
+echo "✅ 部署成功! gunicorn.service 已成功启动并正在运行。"
+
+# 4. (可选) 在日志的最后打印详细状态，方便回看
+echo "--- 服务详细状态如下 ---"
+sudo systemctl status gunicorn.service --no-pager -l
